@@ -1,0 +1,15 @@
+http:
+  port: 9090
+  maxconnections: 5
+  httptimeout: 60
+faiss:
+  dimension: 24000
+  description: IVF128,PQ300
+  metric: InnerProduct
+  dbpath: /tmp/faiss
+datadb:
+  capacity: 1073741824
+  dbpath: /tmp/datadb
+iddb:
+  capacity: 1073741824
+  dbpath: /tmp/iddb

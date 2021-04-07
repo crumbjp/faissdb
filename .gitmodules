@@ -1,0 +1,3 @@
+[submodule "go-faiss"]
+	path = go-faiss
+	url = git@github.com:crumbjp/go-faiss.git
