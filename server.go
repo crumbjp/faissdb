@@ -7,6 +7,8 @@ import (
 	"errors"
 	"strings"
 	"strconv"
+	"math/rand"
+	"container/list"
 	"fmt"
 	"net"
 	"io/ioutil"
@@ -111,25 +113,25 @@ func (self *LocalDB) Open(dbconfig Dbconfig) {
 
 func (self *LocalDB) DestroyDb() {
 	self.rwmutex.Lock()
+	defer self.rwmutex.Unlock()
 	self.defaultBlockBasedTableOptions.Destroy()
 	self.defaultReadOptions.Destroy()
 	self.defaultWriteOptions.Destroy()
 	self.db.Close()
 	gorocksdb.DestroyDb(self.name, self.defaultOptions)
 	self.defaultOptions.Destroy()
-	self.rwmutex.Unlock()
 }
 
 func (self *LocalDB) Close() {
 	self.rwmutex.Lock()
+	defer self.rwmutex.Unlock()
 	self.db.Close()
-	self.rwmutex.Unlock()
 }
 
 func (self *LocalDB) Delete(key string) {
 	self.rwmutex.Lock()
+	defer self.rwmutex.Unlock()
 	err := self.db.Delete(self.defaultWriteOptions, []byte(key))
-	self.rwmutex.Unlock()
 	if err != nil {
 		panic(err)
 	}
@@ -137,8 +139,8 @@ func (self *LocalDB) Delete(key string) {
 
 func (self *LocalDB) Put(key string, value []byte) {
 	self.rwmutex.Lock()
+	defer self.rwmutex.Unlock()
 	err := self.db.Put(self.defaultWriteOptions, []byte(key), value)
-	self.rwmutex.Unlock()
 	if err != nil {
 		panic(err)
 	}
@@ -156,8 +158,8 @@ func (self *LocalDB) PutInt64(key string, value int64) {
 
 func (self *LocalDB) Get(key string) ([]byte) {
 	self.rwmutex.RLock()
+	defer self.rwmutex.RUnlock()
 	value, err := self.db.Get(self.defaultReadOptions, []byte(key))
-	self.rwmutex.RUnlock()
 	if err != nil {
 		panic(err)
 	}
@@ -232,8 +234,8 @@ func (self *LocalIndex) Open() {
 
 func (self *LocalIndex) Write() {
 	self.rwmutex.Lock()
+	defer self.rwmutex.Unlock()
 	err := self.index.WriteIndex(config.Faiss.Dbpath)
-	self.rwmutex.Unlock()
 	if err != nil {
 		panic(err)
 	}
@@ -249,17 +251,17 @@ func (self *LocalIndex) Reset() {
 
 func (self *LocalIndex) Train(vector []float32) {
 	self.rwmutex.Lock()
+	defer self.rwmutex.Unlock()
 	err := self.index.Train(vector)
-	self.rwmutex.Unlock()
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (self *LocalIndex) AddWithIDs(vector []float32, xids []int64) error {
+func (self *LocalIndex) AddWithIDs(vectors []float32, xids []int64) error {
 	self.rwmutex.Lock()
-	err := self.index.AddWithIDs(vector, xids)
-	self.rwmutex.Unlock()
+	defer self.rwmutex.Unlock()
+	err := self.index.AddWithIDs(vectors, xids)
 	if err != nil {
 		log.Println()
 	}
@@ -273,8 +275,8 @@ func (self *LocalIndex) RemoveIDs(ids []int64) int {
 	}
 	var n int
 	self.rwmutex.Lock()
+	defer self.rwmutex.Unlock()
 	n, err = self.index.RemoveIDs(selector)
-	self.rwmutex.Unlock()
 	if err != nil {
 		panic(err)
 	}
@@ -311,18 +313,27 @@ func syncThread() {
 	}
 }
 
-func Set(key string, data Data) {
+func setId(key string, data *Data) {
 	d := Del(key)
 	if d != nil {
 		data.id = d.id
 	} else {
 		rwmutex.Lock()
+		defer rwmutex.Unlock()
 		data.id = currentId
 		currentId++
 		idDB.PutInt64("current", currentId)
-		rwmutex.Unlock()
 	}
+}
+
+func Set(key string, v []float32) error {
+	data := Data{v: v}
+	if(len(data.v) != config.Faiss.Dimension) {
+		return errors.New(fmt.Sprintf("Invalid data dimensions expected: %d actual: %d", config.Faiss.Dimension, len(data.v)))
+	}
+	setId(key, &data)
 	rwmutex.Lock()
+	defer rwmutex.Unlock()
 	encoded, err := data.Encode()
 	if err != nil {
 		panic(err)
@@ -330,13 +341,14 @@ func Set(key string, data Data) {
 	dataDB.Put(key, encoded)
 	idDB.PutString(strconv.FormatInt(data.id, 10), key)
 	localIndex.AddWithIDs(data.v, []int64{data.id})
-	rwmutex.Unlock()
+	return nil
 }
 
 func Del(key string) *Data {
 	var data *Data
 	data = nil
 	rwmutex.Lock()
+	defer rwmutex.Unlock()
 	value := dataDB.Get(key)
 	if(value != nil) {
 		data = &Data{}
@@ -345,7 +357,6 @@ func Del(key string) *Data {
 		idDB.Delete(strconv.FormatInt(data.id, 10))
 		localIndex.RemoveIDs([]int64{data.id})
 	}
-	rwmutex.Unlock()
 	return data
 }
 
@@ -354,7 +365,7 @@ func Sync() {
 	localIndex.Reset()
 	idDB.DestroyDb()
 	idDB.Open(config.Iddb)
-	var tmpId int64
+	idDB.PutInt64("current", currentId)
 	bulkSize := 10000
 	bulkId := make([]int64, bulkSize)
 	bulkV := make([]float32, config.Faiss.Dimension * bulkSize)
@@ -365,12 +376,9 @@ func Sync() {
 	for it = it; it.Valid(); it.Next() {
 		key := it.Key()
 		value := it.Value()
-		bulkId[bulkCount] = currentId
-		idDB.PutString(strconv.FormatInt(bulkId[bulkCount], 10), string(key.Data()))
-		currentId++
 		v := bulkV[(bulkCount * config.Faiss.Dimension):((bulkCount+1)*config.Faiss.Dimension)]
 		buffer := bytes.NewReader(value.Data())
-		err := binary.Read(buffer, binary.LittleEndian, &tmpId)
+		err := binary.Read(buffer, binary.LittleEndian, &bulkId[bulkCount])
 		if err != nil {
 			panic(err)
 		}
@@ -378,6 +386,7 @@ func Sync() {
 		if err != nil {
 			panic(err)
 		}
+		idDB.PutString(strconv.FormatInt(bulkId[bulkCount], 10), string(key.Data()))
 		key.Free()
 		value.Free()
 		bulkCount++
@@ -401,28 +410,30 @@ func Sync() {
 			log.Println(idxErr)
 		}
 	}
-	idDB.PutInt64("current", currentId)
 	localIndex.Write()
 }
 
-func Train(n int, force bool) error {
-	if !force && localIndex.IsTrained() {
-		return nil
-	}
-	training = true
-	log.Println("Build train data")
-	var tmpId int64
-	count := 0
-	trainData := make([]float32, config.Faiss.Dimension * n)
+func buildTrainData(proportion float32) ([]float32) {
+	keys := list.New()
 	dataDB.rwmutex.RLock()
+	defer dataDB.rwmutex.RUnlock()
 	it := dataDB.db.NewIterator(dataDB.defaultReadOptions)
 	it.Seek([]byte(""))
 	defer it.Close()
 	for it = it; it.Valid(); it.Next() {
 		key := it.Key()
-		value := it.Value()
+		if rand.Float32() < proportion {
+			keys.PushBack(string(key.Data()))
+		}
+		key.Free()
+	}
+	var tmpId int64
+	count := 0
+	trainData := make([]float32, config.Faiss.Dimension * keys.Len())
+	for element := keys.Front(); element != nil; element = element.Next() {
+		value := dataDB.Get(element.Value.(string))
 		v := trainData[(count * config.Faiss.Dimension):((count+1)*config.Faiss.Dimension)]
-		buffer := bytes.NewReader(value.Data())
+		buffer := bytes.NewReader(value)
 		err := binary.Read(buffer, binary.LittleEndian, &tmpId)
 		if err != nil {
 			panic(err)
@@ -431,18 +442,19 @@ func Train(n int, force bool) error {
 		if err != nil {
 			panic(err)
 		}
-		key.Free()
-		value.Free()
 		count++
-		if count >= n {
-			break
-		}
 	}
-	dataDB.rwmutex.RUnlock()
-	if count != n {
-		return errors.New("Not inough data")
+	return trainData
+}
+
+func Train(proportion float32, force bool) error {
+	if !force && localIndex.IsTrained() {
+		return nil
 	}
-	log.Println("Train start")
+	training = true
+	log.Println("Build train data")
+	trainData := buildTrainData(proportion)
+	log.Println(fmt.Sprintf("Train start (%d)", len(trainData) / config.Faiss.Dimension))
 	localIndex.Train(trainData)
 	log.Println("Write trained index")
 	localIndex.Write()
@@ -459,7 +471,6 @@ type SearchResult struct {
 
 func Search(v []float32, n int64) ([]SearchResult) {
 	distances, labels := localIndex.Search(v, n)
-	fmt.Println(distances, labels)
 	searchResults := make([]SearchResult, len(distances))
 	for i := 0 ; i < len(distances); i++ {
 		searchResults[i].distance = distances[i]
@@ -471,6 +482,7 @@ func Search(v []float32, n int64) ([]SearchResult) {
 
 type StatusResult struct {
 	Istrained bool
+	Currentid int64
 	Ntotal int64
 }
 
@@ -483,7 +495,7 @@ func parseDenseVector(line string) ([]float32, error) {
 	for count, str := range splited {
 		f, err := strconv.ParseFloat(str, 32)
 		if err != nil {
-			return nil, errors.New("Invalid data")
+			return nil, err
 		}
 		v[count] = float32(f)
 	}
@@ -499,15 +511,17 @@ func parseSparseVector(line string) ([]float32, error) {
 		value := str[colonIndex+1:len(str)]
 		i, err := strconv.Atoi(key)
 		if err != nil {
-			return nil, errors.New("Invalid data")
+			log.Println("parseSparseVector err", key, err)
+			return nil, err
 		}
 		var f float64
 		f, err = strconv.ParseFloat(value, 32)
 		if err != nil {
-			return nil, errors.New("Invalid data")
+			log.Println("parseSparseVector err", value, err)
+			return nil, err
 		}
 		if i >= config.Faiss.Dimension {
-			return nil, errors.New("Invalid data")
+			return nil, errors.New(fmt.Sprintf("Invalid data dimensions expected: %d actual: %d", config.Faiss.Dimension, i))
 		}
 		v[i] = float32(f)
 	}
@@ -545,15 +559,15 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.Method, r.URL.Path)
 	if r.Method == http.MethodGet {
 		if r.URL.Path == "/" {
-			resp, err := json.Marshal(StatusResult{Istrained: localIndex.IsTrained(), Ntotal: localIndex.Ntotal()})
-			fmt.Println(string(resp), err)
+			resp, err := json.Marshal(StatusResult{Istrained: localIndex.IsTrained(), Currentid: currentId, Ntotal: localIndex.Ntotal()})
 			if err != nil {
+				log.Println(err)
 				w.Write([]byte(err.Error()))
 			} else {
-				w.WriteHeader(500)
 				w.Write(resp)
 			}
 		}
+		return
 	} else if terminating || training {
 		w.WriteHeader(400)
 		return
@@ -561,6 +575,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
+			log.Println(err)
 			w.WriteHeader(500)
 			return
 		}
@@ -577,16 +592,27 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 				v, err = parseSparseVector(value)
 			}
 			if err != nil {
+				log.Println(err)
 				w.WriteHeader(500)
 				return
 			}
-			Set(key, Data{v: v})
+			err = Set(key, v)
+			if err != nil {
+				log.Println(err)
+				w.WriteHeader(500)
+				return
+			}
+			w.WriteHeader(200)
+			return
 		} else if r.URL.Path == "/del" {
 			Del(strBody)
+			w.WriteHeader(200)
+			return
 		} else if r.URL.Path == "/search" || r.URL.Path == "/ssearch" {
 			lfIndex := strings.Index(strBody, "\n")
 			n, err := strconv.Atoi(strBody[0:lfIndex])
 			if err != nil {
+				log.Println(err)
 				w.WriteHeader(500)
 				return
 			}
@@ -598,6 +624,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 				v, err = parseSparseVector(value)
 			}
 			if err != nil {
+				log.Println(err)
 				w.WriteHeader(500)
 				return
 			}
@@ -608,24 +635,25 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			w.Write([]byte(resp))
 		} else if r.URL.Path == "/train" {
-			n, err := strconv.Atoi(strBody)
+			proportion, err := strconv.ParseFloat(strBody, 32)
 			if err != nil {
 				w.WriteHeader(500)
 				return
 			}
-			Train(n, false)
+			Train(float32(proportion), false)
 			w.WriteHeader(200)
 		} else if r.URL.Path == "/ftrain" {
-			n, err := strconv.Atoi(strBody)
+			proportion, err := strconv.ParseFloat(strBody, 32)
 			if err != nil {
 				w.WriteHeader(500)
 				return
 			}
-			Train(n, true)
+			Train(float32(proportion), true)
 			w.WriteHeader(200)
 		} else if r.URL.Path == "/sync" {
 			Sync()
 		}
+		return
 	}
 }
 
@@ -692,8 +720,7 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-sigs
-		fmt.Println("*********")
-		fmt.Println(sig)
+		log.Println("Signal: ", sig)
 		terminating = true
 		localIndex.Write()
 		idDB.Close()
@@ -701,42 +728,8 @@ func main() {
 		httpServer.Close()
 	}()
 	go syncThread()
-
 	err := httpServer.Serve(limit_listener)
 	if err != nil {
 		log.Fatalln(err)
 	}
-
-	fmt.Println("**************")
-	// for i := 0; i < 1000; i++ {
-	// 	Set("foo" + strconv.Itoa(i), Data{v: []float32{float32(i % 10), float32(i / 10)}})
-	// }
-	// // Train(900)
-	// Set("bar1", Data{v: []float32{0.7, 0.7}})
-	// Del("foo0")
-
-	// searchResults := Search([]float32{0.7,0.7}, 3)
-	// fmt.Println("**", searchResults)
-
-	// http.HandleFunc("/", sayhelloName)
-	// http.HandleFunc("/db", dbHandler)
-	// err := http.ListenAndServe(":9090", nil)
-	// if err != nil {
-	// 	log.Fatal("ListenAndServe: ", err)
-	// }
 }
-
-// func sayhelloName(w http.ResponseWriter, r *http.Request) {
-// 	r.ParseForm()  //オプションを解析します。デフォルトでは解析しません。
-// 	fmt.Println(r.Form)  //このデータはサーバのプリント情報に出力されます。
-// 	fmt.Println("path", r.URL.Path)
-// 	fmt.Println("scheme", r.URL.Scheme)
-// 	fmt.Println(r.Form["url_long"])
-// 	for k, v := range r.Form {
-// 		fmt.Println("key:", k)
-// 		fmt.Println("val:", strings.Join(v, ""))
-// 	}
-// 	time.Sleep(time.Second * 3)
-
-// 	fmt.Fprintf(w, "Hello astaxie!") //ここでwに入るものがクライアントに出力されます。
-// }
