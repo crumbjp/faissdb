@@ -156,24 +156,27 @@ func (self *LocalDB) PutInt64(key string, value int64) {
 	self.Put(key, buffer.Bytes())
 }
 
-func (self *LocalDB) Get(key string) ([]byte) {
+func (self *LocalDB) Get(key string) *gorocksdb.Slice {
 	self.rwmutex.RLock()
 	defer self.rwmutex.RUnlock()
 	value, err := self.db.Get(self.defaultReadOptions, []byte(key))
 	if err != nil {
 		panic(err)
 	}
-	defer value.Free() // @@@ Unsafe ??
-	return value.Data()
+	return value
 }
 
 func (self *LocalDB) GetString(key string) string {
-	return string(self.Get(key))
+	value := self.Get(key)
+	defer value.Free()
+	return string(value.Data())
 }
 
 func (self *LocalDB) GetInt64(key string) *int64 {
 	var result int64
-	buffer := bytes.NewReader(self.Get(key))
+	value := self.Get(key)
+	defer value.Free()
+	buffer := bytes.NewReader(value.Data())
 	err := binary.Read(buffer, binary.LittleEndian, &result)
 	if err != nil {
 		return nil
@@ -350,9 +353,11 @@ func Del(key string) *Data {
 	rwmutex.Lock()
 	defer rwmutex.Unlock()
 	value := dataDB.Get(key)
-	if(value != nil) {
+	defer value.Free()
+	valueData := value.Data()
+	if(valueData != nil) {
 		data = &Data{}
-		data.Decode(value)
+		data.Decode(valueData)
 		dataDB.Delete(key)
 		idDB.Delete(strconv.FormatInt(data.id, 10))
 		localIndex.RemoveIDs([]int64{data.id})
@@ -432,8 +437,10 @@ func buildTrainData(proportion float32) ([]float32) {
 	trainData := make([]float32, config.Faiss.Dimension * keys.Len())
 	for element := keys.Front(); element != nil; element = element.Next() {
 		value := dataDB.Get(element.Value.(string))
+		defer value.Free()
+		valueData := value.Data()
 		v := trainData[(count * config.Faiss.Dimension):((count+1)*config.Faiss.Dimension)]
-		buffer := bytes.NewReader(value)
+		buffer := bytes.NewReader(valueData)
 		err := binary.Read(buffer, binary.LittleEndian, &tmpId)
 		if err != nil {
 			panic(err)
