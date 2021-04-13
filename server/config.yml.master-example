@@ -1,0 +1,18 @@
+http:
+  port: 9090
+  maxconnections: 5
+  httptimeout: 60
+db:
+  dbpath: /tmp/faissdb
+  faiss:
+    dimension: 2
+    description: IVF2,PQ2
+    metric: InnerProduct
+  datadb:
+    capacity: 1073741824
+  iddb:
+    capacity: 1073741824
+  logdb:
+    capacity: 1073741824
+oplog:
+  term: 3600
