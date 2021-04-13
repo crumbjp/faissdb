@@ -1,20 +1,47 @@
 syntax = "proto3";
 
 option go_package = "github.com/crumbjp/faissdb/server/rpcreplica";
-// option java_multiple_files = true;
-// option java_package = "io.grpc.examples.helloworld";
-// option java_outer_classname = "HelloWorldProto";
 
 package rpcreplica;
 
 service Replica {
-  rpc SayHello (HelloRequest) returns (HelloReply) {}
+  rpc GetLastKey (GetLastKeyRequest) returns (GetLastKeyReply) {}
+  rpc GetTrained (GetTrainedRequest) returns (GetTrainedReply) {}
+  rpc GetData (GetDataRequest) returns (GetDataReply) {}
+  rpc GetCurrentOplog (GetCurrentOplogRequest) returns (GetCurrentOplogReply) {}
 }
 
-message HelloRequest {
-  string name = 1;
+message GetLastKeyRequest {
 }
 
-message HelloReply {
-  string message = 1;
+message GetLastKeyReply {
+  string lastkey = 1;
+}
+
+message GetTrainedRequest {
+}
+
+message GetTrainedReply {
+  bytes data = 1;
+}
+
+message GetDataRequest {
+  string startkey = 1;
+  int32 length = 2;
+}
+
+message GetDataReply {
+  string nextkey = 1;
+  repeated string keys = 2;
+  repeated bytes values = 3;
+}
+
+message GetCurrentOplogRequest {
+  string startkey = 1;
+  int32 length = 2;
+}
+
+message GetCurrentOplogReply {
+  repeated string keys = 1;
+  repeated bytes values = 2;
 }

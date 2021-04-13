@@ -1,4 +1,4 @@
-module server.go
+module faissdb
 
 go 1.15
 
@@ -12,7 +12,7 @@ require (
 	golang.org/x/net v0.0.0-20210331212208-0fccb6fa2b5c
 	google.golang.org/grpc v1.37.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0 // indirect
-	google.golang.org/protobuf v1.26.0 // indirect
+	google.golang.org/protobuf v1.26.0
 	gopkg.in/yaml.v2 v2.4.0
 	local.packages/go-faiss v0.0.0-00010101000000-000000000000
 )

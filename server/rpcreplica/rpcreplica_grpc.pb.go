@@ -18,7 +18,10 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ReplicaClient interface {
-	SayHello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloReply, error)
+	GetLastKey(ctx context.Context, in *GetLastKeyRequest, opts ...grpc.CallOption) (*GetLastKeyReply, error)
+	GetTrained(ctx context.Context, in *GetTrainedRequest, opts ...grpc.CallOption) (*GetTrainedReply, error)
+	GetData(ctx context.Context, in *GetDataRequest, opts ...grpc.CallOption) (*GetDataReply, error)
+	GetCurrentOplog(ctx context.Context, in *GetCurrentOplogRequest, opts ...grpc.CallOption) (*GetCurrentOplogReply, error)
 }
 
 type replicaClient struct {
@@ -29,9 +32,36 @@ func NewReplicaClient(cc grpc.ClientConnInterface) ReplicaClient {
 	return &replicaClient{cc}
 }
 
-func (c *replicaClient) SayHello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloReply, error) {
-	out := new(HelloReply)
-	err := c.cc.Invoke(ctx, "/rpcreplica.Replica/SayHello", in, out, opts...)
+func (c *replicaClient) GetLastKey(ctx context.Context, in *GetLastKeyRequest, opts ...grpc.CallOption) (*GetLastKeyReply, error) {
+	out := new(GetLastKeyReply)
+	err := c.cc.Invoke(ctx, "/rpcreplica.Replica/GetLastKey", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *replicaClient) GetTrained(ctx context.Context, in *GetTrainedRequest, opts ...grpc.CallOption) (*GetTrainedReply, error) {
+	out := new(GetTrainedReply)
+	err := c.cc.Invoke(ctx, "/rpcreplica.Replica/GetTrained", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *replicaClient) GetData(ctx context.Context, in *GetDataRequest, opts ...grpc.CallOption) (*GetDataReply, error) {
+	out := new(GetDataReply)
+	err := c.cc.Invoke(ctx, "/rpcreplica.Replica/GetData", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *replicaClient) GetCurrentOplog(ctx context.Context, in *GetCurrentOplogRequest, opts ...grpc.CallOption) (*GetCurrentOplogReply, error) {
+	out := new(GetCurrentOplogReply)
+	err := c.cc.Invoke(ctx, "/rpcreplica.Replica/GetCurrentOplog", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +72,10 @@ func (c *replicaClient) SayHello(ctx context.Context, in *HelloRequest, opts ...
 // All implementations must embed UnimplementedReplicaServer
 // for forward compatibility
 type ReplicaServer interface {
-	SayHello(context.Context, *HelloRequest) (*HelloReply, error)
+	GetLastKey(context.Context, *GetLastKeyRequest) (*GetLastKeyReply, error)
+	GetTrained(context.Context, *GetTrainedRequest) (*GetTrainedReply, error)
+	GetData(context.Context, *GetDataRequest) (*GetDataReply, error)
+	GetCurrentOplog(context.Context, *GetCurrentOplogRequest) (*GetCurrentOplogReply, error)
 	mustEmbedUnimplementedReplicaServer()
 }
 
@@ -50,8 +83,17 @@ type ReplicaServer interface {
 type UnimplementedReplicaServer struct {
 }
 
-func (UnimplementedReplicaServer) SayHello(context.Context, *HelloRequest) (*HelloReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SayHello not implemented")
+func (UnimplementedReplicaServer) GetLastKey(context.Context, *GetLastKeyRequest) (*GetLastKeyReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLastKey not implemented")
+}
+func (UnimplementedReplicaServer) GetTrained(context.Context, *GetTrainedRequest) (*GetTrainedReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTrained not implemented")
+}
+func (UnimplementedReplicaServer) GetData(context.Context, *GetDataRequest) (*GetDataReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetData not implemented")
+}
+func (UnimplementedReplicaServer) GetCurrentOplog(context.Context, *GetCurrentOplogRequest) (*GetCurrentOplogReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCurrentOplog not implemented")
 }
 func (UnimplementedReplicaServer) mustEmbedUnimplementedReplicaServer() {}
 
@@ -66,20 +108,74 @@ func RegisterReplicaServer(s grpc.ServiceRegistrar, srv ReplicaServer) {
 	s.RegisterService(&Replica_ServiceDesc, srv)
 }
 
-func _Replica_SayHello_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HelloRequest)
+func _Replica_GetLastKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLastKeyRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ReplicaServer).SayHello(ctx, in)
+		return srv.(ReplicaServer).GetLastKey(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rpcreplica.Replica/SayHello",
+		FullMethod: "/rpcreplica.Replica/GetLastKey",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ReplicaServer).SayHello(ctx, req.(*HelloRequest))
+		return srv.(ReplicaServer).GetLastKey(ctx, req.(*GetLastKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Replica_GetTrained_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTrainedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ReplicaServer).GetTrained(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcreplica.Replica/GetTrained",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ReplicaServer).GetTrained(ctx, req.(*GetTrainedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Replica_GetData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetDataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ReplicaServer).GetData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcreplica.Replica/GetData",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ReplicaServer).GetData(ctx, req.(*GetDataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Replica_GetCurrentOplog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCurrentOplogRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ReplicaServer).GetCurrentOplog(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcreplica.Replica/GetCurrentOplog",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ReplicaServer).GetCurrentOplog(ctx, req.(*GetCurrentOplogRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -92,8 +188,20 @@ var Replica_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ReplicaServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "SayHello",
-			Handler:    _Replica_SayHello_Handler,
+			MethodName: "GetLastKey",
+			Handler:    _Replica_GetLastKey_Handler,
+		},
+		{
+			MethodName: "GetTrained",
+			Handler:    _Replica_GetTrained_Handler,
+		},
+		{
+			MethodName: "GetData",
+			Handler:    _Replica_GetData_Handler,
+		},
+		{
+			MethodName: "GetCurrentOplog",
+			Handler:    _Replica_GetCurrentOplog_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

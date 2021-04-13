@@ -1,9 +1,9 @@
 http:
-  port: 9090
+  port: 9091
   maxconnections: 5
   httptimeout: 60
 db:
-  dbpath: /tmp/faissdb
+  dbpath: /tmp/faissdb2
   faiss:
     dimension: 2
     description: IVF2,PQ2
@@ -18,4 +18,5 @@ db:
 oplog:
   term: 10
 replica:
-  listen: ":50021"
+  listen: ":50022"
+  master: "localhost:50021"
