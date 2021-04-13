@@ -108,3 +108,11 @@ cd faissdb
 LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH go run server.go v
 
 ```
+
+## for develop
+```
+brew install protobuf
+export PATH="$PATH:$(go env GOPATH)/bin"
+protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative server.proto
+
+```
