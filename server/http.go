@@ -99,7 +99,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.Method, r.URL.Path)
 	if r.Method == http.MethodGet {
 		if r.URL.Path == "/" {
-			resp, err := json.Marshal(StatusResult{Istrained: localIndex.IsTrained(), Currentid: currentId, Ntotal: localIndex.Ntotal(), Lastkey: LastKey()})
+			resp, err := json.Marshal(StatusResult{Istrained: localIndex.IsTrained(), Ntotal: localIndex.Ntotal(), Lastkey: LastKey()})
 			if err != nil {
 				log.Println(err)
 				w.Write([]byte(err.Error()))

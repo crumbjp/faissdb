@@ -34,7 +34,7 @@ func NewReplicaClient(cc grpc.ClientConnInterface) ReplicaClient {
 
 func (c *replicaClient) GetLastKey(ctx context.Context, in *GetLastKeyRequest, opts ...grpc.CallOption) (*GetLastKeyReply, error) {
 	out := new(GetLastKeyReply)
-	err := c.cc.Invoke(ctx, "/rpcreplica.Replica/GetLastKey", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/replica.Replica/GetLastKey", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (c *replicaClient) GetLastKey(ctx context.Context, in *GetLastKeyRequest, o
 
 func (c *replicaClient) GetTrained(ctx context.Context, in *GetTrainedRequest, opts ...grpc.CallOption) (*GetTrainedReply, error) {
 	out := new(GetTrainedReply)
-	err := c.cc.Invoke(ctx, "/rpcreplica.Replica/GetTrained", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/replica.Replica/GetTrained", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func (c *replicaClient) GetTrained(ctx context.Context, in *GetTrainedRequest, o
 
 func (c *replicaClient) GetData(ctx context.Context, in *GetDataRequest, opts ...grpc.CallOption) (*GetDataReply, error) {
 	out := new(GetDataReply)
-	err := c.cc.Invoke(ctx, "/rpcreplica.Replica/GetData", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/replica.Replica/GetData", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (c *replicaClient) GetData(ctx context.Context, in *GetDataRequest, opts ..
 
 func (c *replicaClient) GetCurrentOplog(ctx context.Context, in *GetCurrentOplogRequest, opts ...grpc.CallOption) (*GetCurrentOplogReply, error) {
 	out := new(GetCurrentOplogReply)
-	err := c.cc.Invoke(ctx, "/rpcreplica.Replica/GetCurrentOplog", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/replica.Replica/GetCurrentOplog", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +118,7 @@ func _Replica_GetLastKey_Handler(srv interface{}, ctx context.Context, dec func(
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rpcreplica.Replica/GetLastKey",
+		FullMethod: "/replica.Replica/GetLastKey",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ReplicaServer).GetLastKey(ctx, req.(*GetLastKeyRequest))
@@ -136,7 +136,7 @@ func _Replica_GetTrained_Handler(srv interface{}, ctx context.Context, dec func(
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rpcreplica.Replica/GetTrained",
+		FullMethod: "/replica.Replica/GetTrained",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ReplicaServer).GetTrained(ctx, req.(*GetTrainedRequest))
@@ -154,7 +154,7 @@ func _Replica_GetData_Handler(srv interface{}, ctx context.Context, dec func(int
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rpcreplica.Replica/GetData",
+		FullMethod: "/replica.Replica/GetData",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ReplicaServer).GetData(ctx, req.(*GetDataRequest))
@@ -172,7 +172,7 @@ func _Replica_GetCurrentOplog_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rpcreplica.Replica/GetCurrentOplog",
+		FullMethod: "/replica.Replica/GetCurrentOplog",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ReplicaServer).GetCurrentOplog(ctx, req.(*GetCurrentOplogRequest))
@@ -184,7 +184,7 @@ func _Replica_GetCurrentOplog_Handler(srv interface{}, ctx context.Context, dec 
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var Replica_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "rpcreplica.Replica",
+	ServiceName: "replica.Replica",
 	HandlerType: (*ReplicaServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -205,5 +205,5 @@ var Replica_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "rpcreplica/rpcreplica.proto",
+	Metadata: "grpc_replica/replica.proto",
 }

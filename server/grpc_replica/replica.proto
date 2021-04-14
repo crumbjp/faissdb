@@ -2,7 +2,7 @@ syntax = "proto3";
 
 option go_package = "github.com/crumbjp/faissdb/server/rpcreplica";
 
-package rpcreplica;
+package replica;
 
 service Replica {
   rpc GetLastKey (GetLastKeyRequest) returns (GetLastKeyReply) {}

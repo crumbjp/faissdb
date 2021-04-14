@@ -16,6 +16,6 @@ db:
   logdb:
     capacity: 1073741824
 oplog:
-  term: 10
+  term: 20
 replica:
   listen: ":50021"

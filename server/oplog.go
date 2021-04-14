@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"strconv"
 	"fmt"
 	"time"
 	"errors"
@@ -11,6 +10,9 @@ import (
 	"encoding/binary"
 	"github.com/tecbot/gorocksdb"
 )
+
+var oplogDB *LocalDB
+var oplogKeyGenerator *IdGenerator
 
 type Oplog struct {
 	op int8
@@ -21,9 +23,8 @@ type Oplog struct {
 const (
 	OP_SYSTEM = int8(0)
 	OP_SET = int8(1)
+	OP_DEL = int8(2)
 )
-// TODO del
-
 
 func (self *Oplog) Encode() ([]byte, error) {
 	buffer := new(bytes.Buffer)
@@ -67,13 +68,11 @@ func (self *Oplog) Decode(b []byte) error {
 	return nil
 }
 
-var oplogDB *LocalDB
-
 func deleteOpLogThread() {
 	for ;; {
 		deleteMs := (time.Now().UnixNano() / 1000000) - (int64(config.Oplog.Term) * 1000)
 		lastKey :=	LastKey()
-		deleteLastKey := strLogKey(deleteMs, 0)
+		deleteLastKey := oplogKeyGenerator.Str(oplogKeyGenerator.Mix(deleteMs, 0))
 		it := oplogDB.db.NewIterator(dataDB.defaultReadOptions)
 		it.Seek([]byte(""))
 		defer it.Close()
@@ -88,6 +87,9 @@ func deleteOpLogThread() {
 				break
 			}
 			oplogDB.Delete(oplogKey)
+		}
+		if IsMaster() {
+			PutOplog(OP_SYSTEM, "", []byte("deleteOpLogThread"))
 		}
 		time.Sleep(10000 * time.Millisecond)
 	}
@@ -131,28 +133,10 @@ func GetCurrentOplog(startKey string, length int) ([]string, []*gorocksdb.Slice,
 	return keys[0:count], slices[0:count], nil
 }
 
-func strLogKey(t int64, i int) string {
-	return fmt.Sprintf("%09s%02s", strconv.FormatInt(t, 32), strconv.FormatInt(int64(i), 32))
-}
-
-func generateLogKey() string{
-	now := time.Now().UnixNano() / 1000000
-	nowIndex := 0
-	nowMutex.Lock()
-	if currentNow == now {
-		currentNowIndex++
-	} else {
-		currentNow = now
-		currentNowIndex = 0
-	}
-	nowIndex = currentNowIndex
-	nowMutex.Unlock()
-	return strLogKey(now, nowIndex)
-}
-
 func InitOplog() {
 	oplogDB = newLocalDB("/log")
 	oplogDB.Open(config.Db.Oplogdb)
+	oplogKeyGenerator = NewIdGenerator()
 	go deleteOpLogThread()
 }
 
@@ -163,7 +147,7 @@ func PutOplogWithKey(logKey string, op int8, key string, d []byte) {
 }
 
 func PutOplog(op int8, key string, d []byte) {
-	logKey := generateLogKey()
+	logKey := oplogKeyGenerator.GenerateString()
 	PutOplogWithKey(logKey, op, key, d)
 }
 

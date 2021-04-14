@@ -2,6 +2,9 @@ package main
 
 import (
 	"os"
+	"time"
+	"strconv"
+	"sync"
 )
 
 func ReadFile(path string) ([]byte, error) {
@@ -33,4 +36,41 @@ func WriteFile(path string, data []byte) (error) {
 		return writeErr
 	}
 	return nil
+}
+
+type IdGenerator struct {
+	mutex sync.Mutex
+	currentNow int64
+	currentNowIndex int
+}
+
+func NewIdGenerator() *IdGenerator {
+	return &IdGenerator{}
+}
+
+func (self *IdGenerator) Str(id int64) string {
+	return strconv.FormatInt(id, 32)
+}
+
+func (self *IdGenerator) Mix(now int64, idx int) int64 {
+	return now * (32<<5) + int64(idx)
+}
+
+func (self *IdGenerator) GenerateString() string {
+	return self.Str(self.Generate())
+}
+
+func (self *IdGenerator) Generate() int64 {
+	now := time.Now().UnixNano() / 1000000
+	nowIndex := 0
+	self.mutex.Lock()
+	if self.currentNow == now {
+		self.currentNowIndex++
+	} else {
+		self.currentNow = now
+		self.currentNowIndex = 0
+	}
+	nowIndex = self.currentNowIndex
+	self.mutex.Unlock()
+	return self.Mix(now, nowIndex)
 }

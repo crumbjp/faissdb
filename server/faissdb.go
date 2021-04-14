@@ -88,27 +88,20 @@ var config Config
 var dataDB *LocalDB
 var idDB *LocalDB
 var rwmutex sync.RWMutex
-var currentId int64
 var terminating bool
 var training bool
-var nowMutex sync.Mutex
-var currentNow int64
-var currentNowIndex int
+var idGenerator *IdGenerator
 
 func setId(key string, data *Data) {
 	d := Del(key)
 	if d != nil {
 		data.id = d.id
 	} else {
-		rwmutex.Lock()
-		defer rwmutex.Unlock()
-		data.id = currentId
-		currentId++
-		idDB.PutInt64("current", currentId)
+		data.id = idGenerator.Generate()
 	}
 }
 
-func SetData(key string, data Data) []byte {
+func SetRaw(key string, data *Data) []byte {
 	rwmutex.Lock()
 	defer rwmutex.Unlock()
 	encoded, err := data.Encode()
@@ -127,27 +120,36 @@ func Set(key string, v []float32) error {
 		return errors.New(fmt.Sprintf("Invalid data dimensions expected: %d actual: %d", config.Db.Faiss.Dimension, len(data.v)))
 	}
 	setId(key, &data)
-	encoded := SetData(key, data)
+	encoded := SetRaw(key, &data)
 	PutOplog(OP_SET, key, encoded)
 	return nil
 }
 
+func DelRaw(key string, data *Data) {
+	dataDB.Delete(key)
+	idDB.Delete(strconv.FormatInt(data.id, 10))
+	localIndex.RemoveIDs([]int64{data.id})
+}
+
 func Del(key string) *Data {
-	var data *Data
-	data = nil
 	rwmutex.Lock()
 	defer rwmutex.Unlock()
 	value := dataDB.Get(key)
 	defer value.Free()
 	valueData := value.Data()
 	if(valueData != nil) {
-		data = &Data{}
+		data := Data{}
 		data.Decode(valueData)
-		dataDB.Delete(key)
-		idDB.Delete(strconv.FormatInt(data.id, 10))
-		localIndex.RemoveIDs([]int64{data.id})
+		DelRaw(key, &data)
+		data.v = nil
+		encoded, err := data.Encode()
+		if err != nil {
+			panic(err)
+		}
+		PutOplog(OP_DEL, key, encoded)
+		return &data
 	}
-	return data
+	return nil
 }
 
 func Sync() {
@@ -155,7 +157,6 @@ func Sync() {
 	localIndex.Reset()
 	idDB.DestroyDb()
 	idDB.Open(config.Db.Iddb)
-	idDB.PutInt64("current", currentId)
 	bulkSize := 10000
 	bulkId := make([]int64, bulkSize)
 	bulkV := make([]float32, config.Db.Faiss.Dimension * bulkSize)
@@ -294,21 +295,16 @@ func main() {
 	rwmutex = sync.RWMutex{}
 	terminating = false
 	training = false
+	idGenerator = NewIdGenerator()
+
 	loadConfig()
 	dataDB = newLocalDB("/data")
 	dataDB.Open(config.Db.Datadb)
 	idDB = newLocalDB("/id")
 	idDB.Open(config.Db.Iddb)
 	InitOplog()
-	ptrCurrentId := idDB.GetInt64("current")
-	if ptrCurrentId != nil {
-		currentId = *ptrCurrentId
-	} else {
-		currentId = 1
-		idDB.PutInt64("current", currentId)
-	}
-	go InitRpcServer()
-	InitRpcClient()
+	go InitRpcReplicaServer()
+	InitRpcReplicaClient()
 	if IsMaster() {
 		InitLocalIndex()
 	} else {
@@ -317,7 +313,7 @@ func main() {
 			ReplicaFullSync()
 		} else {
 			InitLocalIndex()
-			masterLastKey, err := RpcGetLastKey()
+			masterLastKey, err := RpcReplicaGetLastKey()
 			if err != nil {
 				log.Fatalf("No master %v", err)
 			}
@@ -327,5 +323,6 @@ func main() {
 		}
 		go InitReplicaSyncThread()
 	}
-	log.Println("Opened currentId:", currentId, "Ntotal:", localIndex.Ntotal())
+	log.Println("Opened Ntotal:", localIndex.Ntotal())
+	InitHttpServer()
 }

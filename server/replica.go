@@ -7,23 +7,23 @@ import (
 	"log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
-	pb "github.com/crumbjp/faissdb/server/rpcreplica"
+	pb "github.com/crumbjp/faissdb/server/grpc_replica"
 	"context"
 )
 
-type RpcServer struct {
+type RpcReplicaServer struct {
 	pb.UnimplementedReplicaServer
 }
 
-func (self *RpcServer) GetLastKey(ctx context.Context, in *pb.GetLastKeyRequest) (*pb.GetLastKeyReply, error) {
+func (self *RpcReplicaServer) GetLastKey(ctx context.Context, in *pb.GetLastKeyRequest) (*pb.GetLastKeyReply, error) {
 	return &pb.GetLastKeyReply{Lastkey: LastKey()}, nil
 }
 
-func (self *RpcServer) GetTrained(ctx context.Context, in *pb.GetTrainedRequest) (*pb.GetTrainedReply, error) {
+func (self *RpcReplicaServer) GetTrained(ctx context.Context, in *pb.GetTrainedRequest) (*pb.GetTrainedReply, error) {
 	return &pb.GetTrainedReply{Data: ReadFaissTrained()}, nil
 }
 
-func (self *RpcServer) GetData(ctx context.Context, in *pb.GetDataRequest) (*pb.GetDataReply, error) {
+func (self *RpcReplicaServer) GetData(ctx context.Context, in *pb.GetDataRequest) (*pb.GetDataReply, error) {
 	keys, slices, nextKey := GetRawData(in.GetStartkey(), int(in.GetLength()))
 	values := make([][]byte, len(slices))
 	for i, slice := range slices {
@@ -33,7 +33,7 @@ func (self *RpcServer) GetData(ctx context.Context, in *pb.GetDataRequest) (*pb.
 	return &pb.GetDataReply{Nextkey: nextKey, Keys: keys, Values: values}, nil
 }
 
-func (self *RpcServer) GetCurrentOplog(ctx context.Context, in *pb.GetCurrentOplogRequest) (*pb.GetCurrentOplogReply, error) {
+func (self *RpcReplicaServer) GetCurrentOplog(ctx context.Context, in *pb.GetCurrentOplogRequest) (*pb.GetCurrentOplogReply, error) {
 	keys, slices, err := GetCurrentOplog(in.GetStartkey(), int(in.GetLength()))
 	if err != nil {
     log.Println("GetCurrentOplog() %v", err)
@@ -47,23 +47,23 @@ func (self *RpcServer) GetCurrentOplog(ctx context.Context, in *pb.GetCurrentOpl
 	return &pb.GetCurrentOplogReply{Keys: keys, Values: values}, nil
 }
 
-func InitRpcServer() {
+func InitRpcReplicaServer() {
 	listen, err := net.Listen("tcp", config.Replica.Listen)
 	if err != nil {
-    log.Fatalf("InitRpcServer() %v", err)
+    log.Fatalf("InitRpcReplicaServer() %v", err)
 	}
 	server := grpc.NewServer()
-	pb.RegisterReplicaServer(server, &RpcServer{})
+	pb.RegisterReplicaServer(server, &RpcReplicaServer{})
 	if err := server.Serve(listen); err != nil {
-    log.Fatalf("InitRpcServer() %v", err)
+    log.Fatalf("InitRpcReplicaServer() %v", err)
 	}
 }
 
 
 var rpcClientConnection grpc.ClientConnInterface
-var replicaClient pb.ReplicaClient
+var rpcReplicaClient pb.ReplicaClient
 
-func RpcConnect() {
+func rpcReplicaConnect() {
 	clientConn, ok := rpcClientConnection.(*grpc.ClientConn)
 	if ok {
 		state := clientConn.GetState()
@@ -81,75 +81,75 @@ func RpcConnect() {
 		log.Printf("InitRpcClient %v", err)
 	}
 	log.Println("connected")
-	replicaClient = pb.NewReplicaClient(rpcClientConnection)
+	rpcReplicaClient = pb.NewReplicaClient(rpcClientConnection)
 }
 
-func RpcKeepConnectionThread() {
+func rpcReplicaKeepConnectionThread() {
 	for ;; {
-		RpcConnect()
+		rpcReplicaConnect()
 		time.Sleep(1000 * time.Millisecond)
 	}
 }
 
-func InitRpcClient() {
+func InitRpcReplicaClient() {
 	if IsMaster() {
 		return
 	}
-	RpcConnect()
-	go RpcKeepConnectionThread()
+	rpcReplicaConnect()
+	go rpcReplicaKeepConnectionThread()
 }
 
-func RpcGetLastKey() (string, error) {
-	if replicaClient == nil {
-		return "", errors.New("RpcGetLastKey() no client")
+func RpcReplicaGetLastKey() (string, error) {
+	if rpcReplicaClient == nil {
+		return "", errors.New("RpcReplicaGetLastKey() no client")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	reply, err := replicaClient.GetLastKey(ctx, &pb.GetLastKeyRequest{})
+	reply, err := rpcReplicaClient.GetLastKey(ctx, &pb.GetLastKeyRequest{})
 	if err != nil {
-		log.Printf("InitRpcClient %v", err)
+		log.Printf("RpcReplicaGetLastKey %v", err)
 		return "", err
 	}
 	return reply.GetLastkey(), nil
 }
 
-func RpcGetTrained() ([]byte, error) {
-	if replicaClient == nil {
-		return nil, errors.New("RpcGetTrained() no client")
+func RpcReplicaGetTrained() ([]byte, error) {
+	if rpcReplicaClient == nil {
+		return nil, errors.New("RpcReplicaGetTrained() no client")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60 * time.Second)
 	defer cancel()
-	reply, err := replicaClient.GetTrained(ctx, &pb.GetTrainedRequest{})
+	reply, err := rpcReplicaClient.GetTrained(ctx, &pb.GetTrainedRequest{})
 	if err != nil {
-		log.Printf("InitRpcClient %v", err)
+		log.Printf("RpcReplicaGetTrained %v", err)
 		return nil, err
 	}
 	return reply.GetData(), nil
 }
 
-func RpcGetData(startKey string, length int32) ([]string, [][]byte, string, error) {
-	if replicaClient == nil {
-		return nil, nil, "", errors.New("RpcGetData() no client")
+func RpcReplicaGetData(startKey string, length int32) ([]string, [][]byte, string, error) {
+	if rpcReplicaClient == nil {
+		return nil, nil, "", errors.New("RpcReplicaGetData() no client")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60 * time.Second)
 	defer cancel()
-	reply, err := replicaClient.GetData(ctx, &pb.GetDataRequest{Startkey: startKey, Length: length})
+	reply, err := rpcReplicaClient.GetData(ctx, &pb.GetDataRequest{Startkey: startKey, Length: length})
 	if err != nil {
-		log.Printf("InitRpcClient %v", err)
+		log.Printf("RpcReplicaGetData %v", err)
 		return nil, nil, "", err
 	}
 	return reply.GetKeys(), reply.GetValues(), reply.GetNextkey(), nil
 }
 
-func RpcGetCurrentOplog(startKey string, length int32) ([]string, [][]byte, error) {
-	if replicaClient == nil {
-		return nil, nil, errors.New("RpcGetCurrentOplog() no client")
+func RpcReplicaGetCurrentOplog(startKey string, length int32) ([]string, [][]byte, error) {
+	if rpcReplicaClient == nil {
+		return nil, nil, errors.New("RpcReplicaGetCurrentOplog() no client")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60 * time.Second)
 	defer cancel()
-	reply, err := replicaClient.GetCurrentOplog(ctx, &pb.GetCurrentOplogRequest{Startkey: startKey, Length: length})
+	reply, err := rpcReplicaClient.GetCurrentOplog(ctx, &pb.GetCurrentOplogRequest{Startkey: startKey, Length: length})
 	if err != nil {
-		log.Printf("InitRpcClient %v", err)
+		log.Printf("RpcReplicaGetCurrentOplog %v", err)
 		return nil, nil, err
 	}
 	return reply.GetKeys(), reply.GetValues(), nil
@@ -166,8 +166,10 @@ const (
 )
 
 func ReplicaFullSync() {
-	masterLastKey, err := RpcGetLastKey()
-	data, err := RpcGetTrained()
+	log.Printf("ReplicaFullSync() start")
+	masterLastKey, err := RpcReplicaGetLastKey()
+	log.Printf("ReplicaFullSync() lastkey: %s", masterLastKey)
+	data, err := RpcReplicaGetTrained()
 	if err != nil {
     log.Fatalf("ReplicaFullSync() %v", err)
 	}
@@ -182,28 +184,31 @@ func ReplicaFullSync() {
 	InitLocalIndex()
 	currentKey := ""
 	for ;; {
-		keys, values, nextKey, err := RpcGetData(currentKey, FULLSYNC_BULKSIZE)
+		keys, values, nextKey, err := RpcReplicaGetData(currentKey, FULLSYNC_BULKSIZE)
 		if err != nil {
 			log.Fatalf("ReplicaFullSync() %v", err)
 		}
 		for i, value := range values {
 			data := Data{}
 			data.Decode(value)
-			SetData(keys[i], data)
+			SetRaw(keys[i], &data)
 		}
 		if nextKey == "" {
 			break
 		}
 		currentKey = nextKey
+		log.Printf("ReplicaFullSync() next: %s", currentKey)
 	}
 	PutOplogWithKey(masterLastKey, OP_SYSTEM, "", []byte("FullSync"))
+	log.Printf("ReplicaFullSync() end")
 	ReplicaSync()
 }
 
 func ReplicaSync() error {
 	for ;; {
 		lastKey := LastKey()
-		keys, values, err := RpcGetCurrentOplog(lastKey, OPLOG_BULKSIZE)
+		log.Println("ReplicaSync() lastkey: %s", lastKey)
+		keys, values, err := RpcReplicaGetCurrentOplog(lastKey, OPLOG_BULKSIZE)
 		if err != nil {
 			log.Println("ReplicaSync() %v", err)
 			return err
@@ -218,8 +223,19 @@ func ReplicaSync() error {
 					log.Println("ReplicaSync() %v", err)
 					return err
 				}
-				encoded := SetData(oplog.key, data)
-				PutOplog(OP_SET, keys[i], encoded)
+				SetRaw(oplog.key, &data)
+				PutOplogWithKey(keys[i], OP_SET, oplog.key, oplog.d)
+			} else if oplog.op == OP_DEL {
+				data := Data{}
+				err = data.Decode(oplog.d)
+				if err != nil {
+					log.Println("ReplicaSync() %v", err)
+					return err
+				}
+				DelRaw(keys[i], &data)
+				PutOplogWithKey(keys[i], OP_DEL, oplog.key, oplog.d)
+			} else if oplog.op == OP_SYSTEM {
+				PutOplogWithKey(keys[i], OP_SYSTEM, oplog.key, oplog.d)
 			}
 		}
 		if len(values) != OPLOG_BULKSIZE {
