@@ -70,6 +70,10 @@ func (self *Oplog) Decode(b []byte) error {
 
 func deleteOpLogThread() {
 	for ;; {
+		time.Sleep(10000 * time.Millisecond)
+		if status == STATUS_READY {
+			continue
+		}
 		deleteMs := (time.Now().UnixNano() / 1000000) - (int64(config.Oplog.Term) * 1000)
 		lastKey :=	LastKey()
 		deleteLastKey := oplogKeyGenerator.Str(oplogKeyGenerator.Mix(deleteMs, 0))
@@ -91,7 +95,6 @@ func deleteOpLogThread() {
 		if IsMaster() {
 			PutOplog(OP_SYSTEM, "", []byte("deleteOpLogThread"))
 		}
-		time.Sleep(10000 * time.Millisecond)
 	}
 }
 
@@ -117,7 +120,7 @@ func GetCurrentOplog(startKey string, length int) ([]string, []*gorocksdb.Slice,
 		defer key.Free()
 		strKey := string(key.Data())
 		if first {
-			if startKey != strKey {
+			if startKey != "" && startKey != strKey {
 				return nil, nil, errors.New(fmt.Sprintf("Stale oplog expected: %s  actual: %s", startKey, strKey))
 			}
 			first = false
@@ -151,10 +154,13 @@ func PutOplog(op int8, key string, d []byte) {
 	PutOplogWithKey(logKey, op, key, d)
 }
 
-func ReadFaissTrained() []byte{
+func ReadFaissTrained() ([]byte, error) {
+	if IsTraining() {
+		return nil, errors.New("Training now")
+	}
 	data, err := ReadFile(TrainedFilePath())
 	if err != nil {
-    log.Fatalf("ReadFaissTrained() %v", err)
+    log.Printf("ReadFaissTrained() %v", err)
 	}
-	return data
+	return data, err
 }

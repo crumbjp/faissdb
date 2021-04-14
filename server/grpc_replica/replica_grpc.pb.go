@@ -205,5 +205,5 @@ var Replica_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "grpc_replica/replica.proto",
+	Metadata: "replica.proto",
 }

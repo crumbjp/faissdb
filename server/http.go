@@ -108,7 +108,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		return
-	} else if terminating || training {
+	} else if IsTraining() || training {
 		w.WriteHeader(400)
 		return
 	} else if r.Method == http.MethodPost {

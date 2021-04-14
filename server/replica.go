@@ -20,7 +20,8 @@ func (self *RpcReplicaServer) GetLastKey(ctx context.Context, in *pb.GetLastKeyR
 }
 
 func (self *RpcReplicaServer) GetTrained(ctx context.Context, in *pb.GetTrainedRequest) (*pb.GetTrainedReply, error) {
-	return &pb.GetTrainedReply{Data: ReadFaissTrained()}, nil
+	data, err := ReadFaissTrained()
+	return &pb.GetTrainedReply{Data: data}, err
 }
 
 func (self *RpcReplicaServer) GetData(ctx context.Context, in *pb.GetDataRequest) (*pb.GetDataReply, error) {
@@ -36,7 +37,7 @@ func (self *RpcReplicaServer) GetData(ctx context.Context, in *pb.GetDataRequest
 func (self *RpcReplicaServer) GetCurrentOplog(ctx context.Context, in *pb.GetCurrentOplogRequest) (*pb.GetCurrentOplogReply, error) {
 	keys, slices, err := GetCurrentOplog(in.GetStartkey(), int(in.GetLength()))
 	if err != nil {
-    log.Println("GetCurrentOplog() %v", err)
+    log.Printf("GetCurrentOplog() %v", err)
 		return nil, err
 	}
 	values := make([][]byte, len(slices))
@@ -70,17 +71,17 @@ func rpcReplicaConnect() {
 		if state == connectivity.Ready {
 			return
 		}
-		log.Println("Connection error %s", state)
+		log.Printf("Connection error %s", state)
 		clientConn.Close()
 		rpcClientConnection = nil
 	}
-	log.Println("New connection")
+	log.Printf("New connection")
 	var err error
 	rpcClientConnection, err = grpc.Dial(config.Replica.Master, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Printf("InitRpcClient %v", err)
 	}
-	log.Println("connected")
+	log.Printf("connected")
 	rpcReplicaClient = pb.NewReplicaClient(rpcClientConnection)
 }
 
@@ -167,11 +168,16 @@ const (
 
 func ReplicaFullSync() {
 	log.Printf("ReplicaFullSync() start")
-	masterLastKey, err := RpcReplicaGetLastKey()
-	log.Printf("ReplicaFullSync() lastkey: %s", masterLastKey)
-	data, err := RpcReplicaGetTrained()
-	if err != nil {
-    log.Fatalf("ReplicaFullSync() %v", err)
+	var err error
+	var data []byte
+	for ;; {
+		data, err = RpcReplicaGetTrained()
+		if err != nil {
+			log.Printf("ReplicaFullSync() %v", err)
+			time.Sleep(1000 * time.Millisecond)
+			continue
+		}
+		break
 	}
 	err = WriteFile(IndexFilePath(), data)
 	if err != nil {
@@ -182,6 +188,9 @@ func ReplicaFullSync() {
     log.Fatalf("ReplicaFullSync() %v", err)
 	}
 	InitLocalIndex()
+	var masterLastKey string
+	masterLastKey, err = RpcReplicaGetLastKey()
+	log.Printf("ReplicaFullSync() masterLastKey: %s", masterLastKey)
 	currentKey := ""
 	for ;; {
 		keys, values, nextKey, err := RpcReplicaGetData(currentKey, FULLSYNC_BULKSIZE)
@@ -207,10 +216,10 @@ func ReplicaFullSync() {
 func ReplicaSync() error {
 	for ;; {
 		lastKey := LastKey()
-		log.Println("ReplicaSync() lastkey: %s", lastKey)
+		log.Printf("ReplicaSync() lastkey: %v", lastKey)
 		keys, values, err := RpcReplicaGetCurrentOplog(lastKey, OPLOG_BULKSIZE)
 		if err != nil {
-			log.Println("ReplicaSync() %v", err)
+			log.Printf("ReplicaSync() %v", err)
 			return err
 		}
 		for i, value := range values {
@@ -220,7 +229,7 @@ func ReplicaSync() error {
 				data := Data{}
 				err = data.Decode(oplog.d)
 				if err != nil {
-					log.Println("ReplicaSync() %v", err)
+					log.Printf("ReplicaSync() %v", err)
 					return err
 				}
 				SetRaw(oplog.key, &data)
@@ -229,7 +238,7 @@ func ReplicaSync() error {
 				data := Data{}
 				err = data.Decode(oplog.d)
 				if err != nil {
-					log.Println("ReplicaSync() %v", err)
+					log.Printf("ReplicaSync() %v", err)
 					return err
 				}
 				DelRaw(keys[i], &data)

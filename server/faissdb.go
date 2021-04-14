@@ -83,6 +83,10 @@ func (self *Data) Decode(b []byte) error {
 	return nil
 }
 
+const (
+	STATUS_STARTUP = 0
+	STATUS_READY = 1
+)
 // ----------- Logic -----------
 var config Config
 var dataDB *LocalDB
@@ -90,6 +94,7 @@ var idDB *LocalDB
 var rwmutex sync.RWMutex
 var terminating bool
 var training bool
+var status int
 var idGenerator *IdGenerator
 
 func setId(key string, data *Data) {
@@ -242,6 +247,10 @@ func unsetTrain() {
 	training = false
 }
 
+func IsTraining() bool {
+	return training
+}
+
 func Train(proportion float32, force bool) error {
 	if !force && localIndex.IsTrained() {
 		return nil
@@ -266,13 +275,16 @@ type SearchResult struct {
 
 func Search(v []float32, n int64) ([]SearchResult) {
 	distances, labels := localIndex.Search(v, n)
+	count := 0
 	searchResults := make([]SearchResult, len(distances))
 	for i := 0 ; i < len(distances); i++ {
-		searchResults[i].distance = distances[i]
-		value := idDB.GetString(strconv.FormatInt(labels[i], 10))
-		searchResults[i].key = string(value)
+		if labels[i] != -1 {
+			searchResults[count].distance = distances[i]
+			searchResults[count].key = string(idDB.GetString(strconv.FormatInt(labels[i], 10)))
+			count++
+		}
 	}
-	return searchResults
+	return searchResults[0:count]
 }
 
 func loadConfig() {
@@ -295,15 +307,16 @@ func main() {
 	rwmutex = sync.RWMutex{}
 	terminating = false
 	training = false
-	idGenerator = NewIdGenerator()
+	status = STATUS_STARTUP
 
+	idGenerator = NewIdGenerator()
 	loadConfig()
 	dataDB = newLocalDB("/data")
 	dataDB.Open(config.Db.Datadb)
 	idDB = newLocalDB("/id")
 	idDB.Open(config.Db.Iddb)
-	InitOplog()
 	go InitRpcReplicaServer()
+	InitOplog()
 	InitRpcReplicaClient()
 	if IsMaster() {
 		InitLocalIndex()
@@ -323,6 +336,7 @@ func main() {
 		}
 		go InitReplicaSyncThread()
 	}
+	status = STATUS_READY
 	log.Println("Opened Ntotal:", localIndex.Ntotal())
 	InitHttpServer()
 }
