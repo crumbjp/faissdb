@@ -1,8 +1,5 @@
 package main
 
-    // dimension: 24000
-    // description: IVF128,PQ300
-
 import (
 	"os"
 	"errors"
@@ -27,6 +24,13 @@ type Replicaonfig struct {
 	Master string
 }
 
+type Faissconfig struct {
+	Dimension int
+	Description string
+	Metric string
+	Syncinterval time.Duration
+}
+
 type Config struct {
 	Http struct {
 		MaxConnections int
@@ -35,18 +39,16 @@ type Config struct {
 	}
 	Db struct {
 		Dbpath string
-		Faiss struct {
-			Dimension int
-			Description string
-			Metric string
-			Syncinterval time.Duration
-		}
+		Faiss Faissconfig
 		Datadb Dbconfig
 		Iddb Dbconfig
 		Oplogdb Dbconfig
 	}
 	Oplog struct {
 		Term int
+	}
+	Feature struct {
+		Listen string
 	}
 	Replica Replicaonfig
 }
@@ -338,5 +340,6 @@ func main() {
 	}
 	status = STATUS_READY
 	log.Println("Opened Ntotal:", localIndex.Ntotal())
+	go InitRpcFeatureServer()
 	InitHttpServer()
 }

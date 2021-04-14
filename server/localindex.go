@@ -146,7 +146,7 @@ func (self *LocalIndex) Ntotal() int64 {
 func syncThread() {
 	for ;; {
 		time.Sleep(config.Db.Faiss.Syncinterval * time.Millisecond)
-		if !IsTraining() && !training {
+		if !IsTraining() && !terminating {
 			log.Println("localIndex.Write() start")
 			localIndex.Write()
 			log.Println("localIndex.Write() end")

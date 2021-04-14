@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+option go_package = "github.com/crumbjp/faissdb/server/feature";
+
+package feature;
+
+service Feature {
+  rpc Set (SetRequest) returns (SetReply) {}
+  rpc Del (DelRequest) returns (DelReply) {}
+  rpc Search (SearchRequest) returns (SearchReply) {}
+  rpc Train (TrainRequest) returns (TrainReply) {}
+}
+
+message Data {
+  string key = 1;
+  repeated double v = 2;
+  string sparsev = 3;
+}
+
+message SetRequest {
+  repeated Data data = 1;
+}
+
+message SetReply {
+  int32 nstored = 1;
+  int32 nerror = 2;
+}
+
+message DelRequest {
+  repeated string key = 1;
+}
+
+message DelReply {
+}
+
+message SearchRequest {
+  int32 n = 1;
+  repeated double v = 2;
+  string sparsev = 3;
+}
+
+message SearchReply {
+  repeated double distances = 1;
+  repeated string keys = 2;
+}
+
+message TrainRequest {
+  double proportion = 1;
+  bool force = 2;
+}
+
+message TrainReply {
+}

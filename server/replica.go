@@ -7,6 +7,7 @@ import (
 	"log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/keepalive"
 	pb "github.com/crumbjp/faissdb/server/grpc_replica"
 	"context"
 )
@@ -53,7 +54,13 @@ func InitRpcReplicaServer() {
 	if err != nil {
     log.Fatalf("InitRpcReplicaServer() %v", err)
 	}
-	server := grpc.NewServer()
+	server := grpc.NewServer(
+		grpc.MaxSendMsgSize(100*1024*1024),
+		grpc.MaxRecvMsgSize(100*1024*1024),
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime: 2 * time.Second,
+			PermitWithoutStream: true,
+		}))
 	pb.RegisterReplicaServer(server, &RpcReplicaServer{})
 	if err := server.Serve(listen); err != nil {
     log.Fatalf("InitRpcReplicaServer() %v", err)
@@ -72,12 +79,17 @@ func rpcReplicaConnect() {
 			return
 		}
 		log.Printf("Connection error %s", state)
-		clientConn.Close()
-		rpcClientConnection = nil
+		// clientConn.Close()
+		// rpcClientConnection = nil
+		return
 	}
 	log.Printf("New connection")
 	var err error
-	rpcClientConnection, err = grpc.Dial(config.Replica.Master, grpc.WithInsecure(), grpc.WithBlock())
+	rpcClientConnection, err = grpc.Dial(
+		config.Replica.Master,
+		grpc.WithMaxMsgSize(100*1024*1024),
+		grpc.WithInsecure(),
+		grpc.WithBlock())
 	if err != nil {
 		log.Printf("InitRpcClient %v", err)
 	}
@@ -85,19 +97,11 @@ func rpcReplicaConnect() {
 	rpcReplicaClient = pb.NewReplicaClient(rpcClientConnection)
 }
 
-func rpcReplicaKeepConnectionThread() {
-	for ;; {
-		rpcReplicaConnect()
-		time.Sleep(1000 * time.Millisecond)
-	}
-}
-
 func InitRpcReplicaClient() {
 	if IsMaster() {
 		return
 	}
 	rpcReplicaConnect()
-	go rpcReplicaKeepConnectionThread()
 }
 
 func RpcReplicaGetLastKey() (string, error) {
