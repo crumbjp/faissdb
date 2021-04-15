@@ -1,6 +1,6 @@
 [submodule "go-faiss"]
 	path = go-faiss
-	url = git@github.com:crumbjp/go-faiss.git
+	url = https://github.com/crumbjp/go-faiss.git
 [submodule "grpc-go"]
 	path = grpc-go
 	url = https://github.com/grpc/grpc-go
