@@ -20,7 +20,7 @@ var httpServer *http.Server
 type StatusResult struct {
 	Istrained bool
 	Ntotal int64
-	LastsyncedAt string
+	Lastsynced string
 	Lastkey string
 	Faiss Faissconfig
 }
@@ -37,7 +37,12 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.Method, r.URL.Path)
 	if r.Method == http.MethodGet {
 		if r.URL.Path == "/" {
-			resp, err := json.Marshal(StatusResult{Istrained: localIndex.IsTrained(), Ntotal: localIndex.Ntotal(), Lastkey: LastKey()})
+			resp, err := json.Marshal(StatusResult{
+				Istrained: localIndex.IsTrained(),
+				Ntotal: localIndex.Ntotal(),
+				Faiss: config.Db.Faiss,
+				Lastsynced: 	metaDB.GetString("lastkey"),
+				Lastkey: LastKey()})
 			if err != nil {
 				log.Println(err)
 				w.Write([]byte(err.Error()))
@@ -46,7 +51,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		return
-	} else if IsTraining() || terminating {
+	} else if FaissdbStatus != STATUS_READY {
 		w.WriteHeader(400)
 		return
 	} else if r.Method == http.MethodPost {
@@ -74,8 +79,8 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			Train(float32(proportion), true)
 			w.WriteHeader(200)
-		} else if r.URL.Path == "/sync" {
-			Sync()
+		} else if r.URL.Path == "/fullsync" {
+			FullLocalSync()
 		}
 		return
 	}
@@ -85,7 +90,7 @@ func InitHttpServer() {
 	http.HandleFunc("/", httpHandler)
 	http.HandleFunc("/train", httpHandler)
 	http.HandleFunc("/ftrain", httpHandler)
-	http.HandleFunc("/sync", httpHandler)
+	http.HandleFunc("/fullsync", httpHandler)
 	listener, listenErr := net.Listen("tcp", fmt.Sprintf(":%d", config.Http.Port))
 	if listenErr != nil {
 		log.Fatalln(listenErr)
@@ -100,7 +105,7 @@ func InitHttpServer() {
 	go func() {
 		sig := <-sigs
 		log.Println("Signal: ", sig)
-		terminating = true
+		setStatus(STATUS_TERMINATING)
 		localIndex.Write()
 		idDB.Close()
 		dataDB.Close()

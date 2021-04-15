@@ -1,3 +1,7 @@
+process:
+  logfile: /tmp/faissdb.log
+  pidfile: /tmp/faissdb.pid
+  daemon: true
 http:
   port: 9090
   maxconnections: 1000
@@ -9,6 +13,8 @@ db:
     description: IVF128,PQ300_8
     metric: InnerProduct
     syncinterval: 60000
+  metadb:
+    capacity: 1073741824
   datadb:
     capacity: 1073741824
   iddb:

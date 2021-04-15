@@ -18,7 +18,7 @@ type RpcFeatureServer struct {
 func (self *RpcFeatureServer) Set(ctx context.Context, in *pb.SetRequest) (*pb.SetReply, error) {
 	nStored := 0
 	nError := 0
-	if IsTraining() || terminating {
+	if FaissdbStatus != STATUS_READY {
 		return nil, errors.New("Not ready")
 	}
 	var err error
@@ -49,7 +49,7 @@ func (self *RpcFeatureServer) Set(ctx context.Context, in *pb.SetRequest) (*pb.S
 }
 
 func (self *RpcFeatureServer) Del(ctx context.Context, in *pb.DelRequest) (*pb.DelReply, error) {
-	if IsTraining() || terminating {
+	if FaissdbStatus != STATUS_READY {
 		return nil, errors.New("Not ready")
 	}
 	for _, key := range in.GetKey() {
@@ -61,7 +61,7 @@ func (self *RpcFeatureServer) Del(ctx context.Context, in *pb.DelRequest) (*pb.D
 
 
 func (self *RpcFeatureServer) Train(ctx context.Context, in *pb.TrainRequest) (*pb.TrainReply, error) {
-	if IsTraining() || terminating {
+	if FaissdbStatus != STATUS_READY {
 		return nil, errors.New("Not ready")
 	}
 	log.Println(" - train")

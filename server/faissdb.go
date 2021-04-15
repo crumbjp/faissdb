@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"gopkg.in/yaml.v2"
+	"github.com/sevlyar/go-daemon"
 )
 
 type Dbconfig struct {
@@ -32,6 +33,11 @@ type Faissconfig struct {
 }
 
 type Config struct {
+	Process struct {
+		Logfile string
+		Pidfile string
+		Daemon bool
+	}
 	Http struct {
 		MaxConnections int
 		Port int
@@ -40,6 +46,7 @@ type Config struct {
 	Db struct {
 		Dbpath string
 		Faiss Faissconfig
+		Metadb Dbconfig
 		Datadb Dbconfig
 		Iddb Dbconfig
 		Oplogdb Dbconfig
@@ -87,16 +94,18 @@ func (self *Data) Decode(b []byte) error {
 
 const (
 	STATUS_STARTUP = 0
-	STATUS_READY = 1
+	STATUS_TRAINING = 2
+	STATUS_READY = 100
+	STATUS_TERMINATING = 255
+
 )
 // ----------- Logic -----------
 var config Config
+var metaDB *LocalDB
 var dataDB *LocalDB
 var idDB *LocalDB
 var rwmutex sync.RWMutex
-var terminating bool
-var training bool
-var status int
+var FaissdbStatus int
 var idGenerator *IdGenerator
 
 func setId(key string, data *Data) {
@@ -159,18 +168,15 @@ func Del(key string) *Data {
 	return nil
 }
 
-func Sync() {
-	log.Println("Sync")
-	localIndex.Reset()
-	idDB.DestroyDb()
-	idDB.Open(config.Db.Iddb)
+func SyncFrom(start string) {
+	log.Println("SyncFrom()")
 	bulkSize := 10000
 	bulkId := make([]int64, bulkSize)
 	bulkV := make([]float32, config.Db.Faiss.Dimension * bulkSize)
 	tmpData := Data{}
 	bulkCount := 0
 	it := dataDB.db.NewIterator(dataDB.defaultReadOptions)
-	it.Seek([]byte(""))
+	it.Seek([]byte(start))
 	defer it.Close()
 	for it = it; it.Valid(); it.Next() {
 		key := it.Key()
@@ -203,6 +209,14 @@ func Sync() {
 		}
 	}
 	localIndex.Write()
+}
+
+func FullLocalSync() {
+	log.Println("FullLocalSync()")
+	localIndex.Reset()
+	idDB.DestroyDb()
+	idDB.Open(config.Db.Iddb)
+	SyncFrom("")
 }
 
 func buildTrainData(proportion float32) ([]float32) {
@@ -241,31 +255,30 @@ func buildTrainData(proportion float32) ([]float32) {
 	return trainData
 }
 
-func setTrain() {
-	training = true
-}
-
-func unsetTrain() {
-	training = false
-}
-
-func IsTraining() bool {
-	return training
+func setStatus(status int) error {
+	if FaissdbStatus == STATUS_TERMINATING {
+		return errors.New("Terminating now")
+	}
+	FaissdbStatus = status
+	return nil
 }
 
 func Train(proportion float32, force bool) error {
 	if !force && localIndex.IsTrained() {
 		return nil
 	}
-	setTrain()
-	defer unsetTrain()
+	err := setStatus(STATUS_TRAINING)
+	if err != nil {
+		return err
+	}
 	log.Println("Build train data")
 	trainData := buildTrainData(proportion)
 	log.Println(fmt.Sprintf("Train start (%d)", len(trainData) / config.Db.Faiss.Dimension))
 	localIndex.Train(trainData)
 	log.Println("Write trained index")
 	localIndex.WriteTrained()
-	Sync()
+	FullLocalSync()
+	setStatus(STATUS_READY)
 	log.Println("Train end")
 	return nil
 }
@@ -305,14 +318,13 @@ func loadConfig() {
 	}
 }
 
-func main() {
+func start() {
+	log.Println("start()")
 	rwmutex = sync.RWMutex{}
-	terminating = false
-	training = false
-	status = STATUS_STARTUP
-
+	setStatus(STATUS_STARTUP)
 	idGenerator = NewIdGenerator()
-	loadConfig()
+	metaDB = newLocalDB("/meta")
+	metaDB.Open(config.Db.Metadb)
 	dataDB = newLocalDB("/data")
 	dataDB.Open(config.Db.Datadb)
 	idDB = newLocalDB("/id")
@@ -338,8 +350,36 @@ func main() {
 		}
 		go InitReplicaSyncThread()
 	}
-	status = STATUS_READY
+	setStatus(STATUS_READY)
 	log.Println("Opened Ntotal:", localIndex.Ntotal())
 	go InitRpcFeatureServer()
 	InitHttpServer()
+}
+
+func main() {
+	loadConfig()
+	logfile, err := os.OpenFile(config.Process.Logfile, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
+	if err != nil {
+		log.Fatalf("Failure to open logfile %s", config.Process.Logfile)
+	}
+	log.SetOutput(logfile)
+	if config.Process.Daemon {
+		context := &daemon.Context{
+			PidFileName: config.Process.Pidfile,
+			PidFilePerm: 0644,
+			WorkDir:     "./",
+		}
+		child, err := context.Reborn()
+		if err != nil {
+			log.Fatalln(err)
+		}
+		if child != nil {
+			return
+		}
+		defer context.Release()
+		start()
+	} else {
+		start()
+	}
+	log.Println("main() end")
 }

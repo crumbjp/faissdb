@@ -71,7 +71,7 @@ func (self *Oplog) Decode(b []byte) error {
 func deleteOpLogThread() {
 	for ;; {
 		time.Sleep(10000 * time.Millisecond)
-		if status == STATUS_READY {
+		if FaissdbStatus == STATUS_READY {
 			continue
 		}
 		deleteMs := (time.Now().UnixNano() / 1000000) - (int64(config.Oplog.Term) * 1000)
@@ -155,7 +155,7 @@ func PutOplog(op int8, key string, d []byte) {
 }
 
 func ReadFaissTrained() ([]byte, error) {
-	if IsTraining() {
+	if FaissdbStatus == STATUS_TRAINING {
 		return nil, errors.New("Training now")
 	}
 	data, err := ReadFile(TrainedFilePath())

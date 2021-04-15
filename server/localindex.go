@@ -88,7 +88,11 @@ func (self *LocalIndex) WriteTrained() {
 }
 
 func (self *LocalIndex) Write() {
+	log.Println("localIndex.Write() start")
+	lastkey := LastKey()
 	self.flush(IndexFilePath());
+	metaDB.PutString("lastkey", lastkey)
+	log.Println("localIndex.Write() end")
 }
 
 func (self *LocalIndex) IsTrained() (bool) {
@@ -146,10 +150,8 @@ func (self *LocalIndex) Ntotal() int64 {
 func syncThread() {
 	for ;; {
 		time.Sleep(config.Db.Faiss.Syncinterval * time.Millisecond)
-		if !IsTraining() && !terminating {
-			log.Println("localIndex.Write() start")
+		if FaissdbStatus == STATUS_READY {
 			localIndex.Write()
-			log.Println("localIndex.Write() end")
 		}
 	}
 }
@@ -157,5 +159,11 @@ func syncThread() {
 func InitLocalIndex() {
 	localIndex = newLocalIndex()
 	localIndex.Open()
+	lastkey := LastKey()
+	metaLastkey := metaDB.GetString("lastkey")
+	if lastkey != metaLastkey {
+		log.Printf("Detect gap index(%v) != localdb(%v)", metaLastkey, lastkey)
+		SyncFrom(metaLastkey)
+	}
 	go syncThread()
 }
