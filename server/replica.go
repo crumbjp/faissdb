@@ -183,15 +183,11 @@ func ReplicaFullSync() {
 		}
 		break
 	}
-	err = WriteFile(IndexFilePath(), data)
-	if err != nil {
-    log.Fatalf("ReplicaFullSync() %v", err)
-	}
 	err = WriteFile(TrainedFilePath(), data)
 	if err != nil {
     log.Fatalf("ReplicaFullSync() %v", err)
 	}
-	InitLocalIndex()
+	localIndex.ResetToTrained()
 	var masterLastKey string
 	masterLastKey, err = RpcReplicaGetLastKey()
 	log.Printf("ReplicaFullSync() masterLastKey: %s", masterLastKey)
@@ -202,9 +198,9 @@ func ReplicaFullSync() {
 			log.Fatalf("ReplicaFullSync() %v", err)
 		}
 		for i, value := range values {
-			data := Data{}
-			data.Decode(value)
-			SetRaw(keys[i], &data)
+			faissdbRecord := &pb.FaissdbRecord{}
+			DecodeFaissdbRecord(faissdbRecord, value)
+			SetRaw(keys[i], faissdbRecord)
 		}
 		if nextKey == "" {
 			break
@@ -230,22 +226,22 @@ func ReplicaSync() error {
 			oplog := Oplog{}
 			oplog.Decode(value)
 			if oplog.op == OP_SET {
-				data := Data{}
-				err = data.Decode(oplog.d)
+				faissdbRecord := &pb.FaissdbRecord{}
+				err = DecodeFaissdbRecord(faissdbRecord, oplog.d)
 				if err != nil {
 					log.Printf("ReplicaSync() %v", err)
 					return err
 				}
-				SetRaw(oplog.key, &data)
+				SetRaw(oplog.key, faissdbRecord)
 				PutOplogWithKey(keys[i], OP_SET, oplog.key, oplog.d)
 			} else if oplog.op == OP_DEL {
-				data := Data{}
-				err = data.Decode(oplog.d)
+				faissdbRecord := &pb.FaissdbRecord{}
+				err = DecodeFaissdbRecord(faissdbRecord, oplog.d)
 				if err != nil {
 					log.Printf("ReplicaSync() %v", err)
 					return err
 				}
-				DelRaw(keys[i], &data)
+				DelRaw(keys[i], faissdbRecord)
 				PutOplogWithKey(keys[i], OP_DEL, oplog.key, oplog.d)
 			} else if oplog.op == OP_SYSTEM {
 				PutOplogWithKey(keys[i], OP_SYSTEM, oplog.key, oplog.d)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"sync"
 	"github.com/tecbot/gorocksdb"
 	"encoding/binary"
@@ -34,6 +35,7 @@ func (self *LocalDB) Open(dbconfig Dbconfig) {
 	self.defaultOptions.SetCreateIfMissing(true)
 	db, err := gorocksdb.OpenDb(self.defaultOptions, self.name)
 	if err != nil {
+		log.Println("Open() %v", err)
 		panic(err)
 	}
 	self.db = db

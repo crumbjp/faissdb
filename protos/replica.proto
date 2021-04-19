@@ -45,3 +45,9 @@ message GetCurrentOplogReply {
   repeated string keys = 1;
   repeated bytes values = 2;
 }
+
+message FaissdbRecord {
+  int64 id = 1;
+  repeated float v = 2;
+  repeated string collections = 3;
+}

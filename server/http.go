@@ -80,7 +80,13 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 			Train(float32(proportion), true)
 			w.WriteHeader(200)
 		} else if r.URL.Path == "/fullsync" {
+			err := setStatus(STATUS_FULLSYNC)
+			if err != nil {
+				w.WriteHeader(500)
+				return
+			}
 			FullLocalSync()
+			setStatus(STATUS_READY)
 		}
 		return
 	}

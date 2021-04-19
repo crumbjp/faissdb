@@ -1,0 +1,33 @@
+process:
+  logfile: /tmp/faissdb2.log
+  pidfile: /tmp/faissdb2.pid
+  daemon: false
+http:
+  port: 9091
+  maxconnections: 1000
+  httptimeout: 60
+db:
+  dbpath: /tmp/faissdbtest2
+  faiss:
+    dimension: 2
+    syncinterval: 60000
+    description: IVF2,PQ2_8
+    metric: InnerProduct
+    nprobe: 10
+    collections:
+      - weekly
+  metadb:
+    capacity: 1073741824
+  datadb:
+    capacity: 1073741824
+  iddb:
+    capacity: 1073741824
+  logdb:
+    capacity: 1073741824
+oplog:
+  term: 20
+feature:
+  listen: ":20022"
+replica:
+  listen: ":50022"
+  master: "localhost:50021"

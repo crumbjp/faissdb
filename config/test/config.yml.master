@@ -1,18 +1,21 @@
 process:
   logfile: /tmp/faissdb.log
   pidfile: /tmp/faissdb.pid
-  daemon: true
+  daemon: false
 http:
   port: 9090
   maxconnections: 1000
   httptimeout: 60
 db:
-  dbpath: /tmp/faissdb
+  dbpath: /tmp/faissdbtest
   faiss:
-    dimension: 24000
-    description: IVF128,PQ300_8
-    metric: InnerProduct
+    dimension: 2
     syncinterval: 60000
+    description: IVF2,PQ2_8
+    metric: InnerProduct
+    nprobe: 10
+    collections:
+      - weekly
   metadb:
     capacity: 1073741824
   datadb:

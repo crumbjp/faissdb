@@ -15,6 +15,7 @@ message Data {
   string key = 1;
   repeated double v = 2;
   string sparsev = 3;
+  repeated string collections = 4;
 }
 
 message SetRequest {
@@ -37,6 +38,7 @@ message SearchRequest {
   int32 n = 1;
   repeated double v = 2;
   string sparsev = 3;
+  string collection = 4;
 }
 
 message SearchReply {
