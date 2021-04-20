@@ -83,6 +83,9 @@ func (self *FaissIndex) Close() {
 }
 
 func (self *FaissIndex) flush(path string) {
+	if self.index == nil {
+		return
+	}
 	self.rwmutex.Lock()
 	defer self.rwmutex.Unlock()
 	err := faiss.WriteIndex(self.index, path)
