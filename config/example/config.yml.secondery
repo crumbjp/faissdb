@@ -28,4 +28,4 @@ oplog:
   term: 3600
 replica:
   listen: ":21022"
-  master: "localhost:21021"
+  primary: "localhost:21021"

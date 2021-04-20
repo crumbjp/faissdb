@@ -23,7 +23,7 @@ type Dbconfig struct {
 
 type Replicaonfig struct {
 	Listen string
-	Master string
+	Primary string
 }
 
 type Config struct {

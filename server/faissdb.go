@@ -45,7 +45,7 @@ func start() {
 	go InitRpcReplicaServer()
 	InitOplog()
 	InitRpcReplicaClient()
-	if IsMaster() {
+	if IsPrimary() {
 		InitLocalIndex()
 		GapSyncLocalIndex()
 	} else {

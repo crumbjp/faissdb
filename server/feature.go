@@ -18,7 +18,7 @@ type RpcFeatureServer struct {
 func (self *RpcFeatureServer) Set(ctx context.Context, in *pb.SetRequest) (*pb.SetReply, error) {
 	nStored := 0
 	nError := 0
-	if IsMaster() {
+	if IsPrimary() {
 		if FaissdbStatus != STATUS_READY {
 			return nil, errors.New("Not ready")
 		}
@@ -51,7 +51,7 @@ func (self *RpcFeatureServer) Set(ctx context.Context, in *pb.SetRequest) (*pb.S
 }
 
 func (self *RpcFeatureServer) Del(ctx context.Context, in *pb.DelRequest) (*pb.DelReply, error) {
-	if IsMaster() {
+	if IsPrimary() {
 		if FaissdbStatus != STATUS_READY {
 			return nil, errors.New("Not ready")
 		}
@@ -66,7 +66,7 @@ func (self *RpcFeatureServer) Del(ctx context.Context, in *pb.DelRequest) (*pb.D
 
 func (self *RpcFeatureServer) Train(ctx context.Context, in *pb.TrainRequest) (*pb.TrainReply, error) {
 	var err error
-	if IsMaster() {
+	if IsPrimary() {
 		if FaissdbStatus != STATUS_READY {
 			return nil, errors.New("Not ready")
 		}

@@ -86,7 +86,7 @@ func rpcReplicaConnect() {
 	log.Printf("New connection")
 	var err error
 	rpcClientConnection, err = grpc.Dial(
-		config.Replica.Master,
+		config.Replica.Primary,
 		grpc.WithMaxMsgSize(100*1024*1024),
 		grpc.WithInsecure(),
 		grpc.WithBlock())
@@ -98,7 +98,7 @@ func rpcReplicaConnect() {
 }
 
 func InitRpcReplicaClient() {
-	if IsMaster() {
+	if IsPrimary() {
 		return
 	}
 	rpcReplicaConnect()
@@ -161,8 +161,8 @@ func RpcReplicaGetCurrentOplog(startKey string, length int32) ([]string, [][]byt
 }
 
 
-func IsMaster() bool {
-	return config.Replica.Master == ""
+func IsPrimary() bool {
+	return config.Replica.Primary == ""
 }
 
 const (

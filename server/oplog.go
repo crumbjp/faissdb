@@ -92,7 +92,7 @@ func deleteOpLogThread() {
 			}
 			oplogDB.Delete(oplogKey)
 		}
-		if IsMaster() {
+		if IsPrimary() {
 			PutOplog(OP_SYSTEM, "", []byte("deleteOpLogThread"))
 		}
 	}

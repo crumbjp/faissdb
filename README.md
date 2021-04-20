@@ -36,7 +36,7 @@ Almost same as Set.
 
 
 ## Plan
-|  supported version  |  feature  |
+|  version  |  feature  |
 | ---- | ---- |
 |  alpha  |  simple replication  |
 |  N/A  | auto promotion from SECONDARY to PRIMARY if needed |
