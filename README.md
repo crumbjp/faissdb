@@ -31,7 +31,7 @@ Almost same as Set.
 4. faissdb returns `distances` and `uniqkeys`
 
 ## Client
-- Call [gRPC](/faissdb/protos/feature.proto) directly
+- Call gRPC directly. [feature.proto](/protos/feature.proto)
 - [nodejs](https://github.com/crumbjp/faissdb_client_node)
 
 
