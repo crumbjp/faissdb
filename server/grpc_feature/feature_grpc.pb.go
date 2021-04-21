@@ -18,6 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type FeatureClient interface {
+	Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusReply, error)
 	Set(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*SetReply, error)
 	Del(ctx context.Context, in *DelRequest, opts ...grpc.CallOption) (*DelReply, error)
 	Search(ctx context.Context, in *SearchRequest, opts ...grpc.CallOption) (*SearchReply, error)
@@ -30,6 +31,15 @@ type featureClient struct {
 
 func NewFeatureClient(cc grpc.ClientConnInterface) FeatureClient {
 	return &featureClient{cc}
+}
+
+func (c *featureClient) Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusReply, error) {
+	out := new(StatusReply)
+	err := c.cc.Invoke(ctx, "/feature.Feature/Status", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *featureClient) Set(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*SetReply, error) {
@@ -72,6 +82,7 @@ func (c *featureClient) Train(ctx context.Context, in *TrainRequest, opts ...grp
 // All implementations must embed UnimplementedFeatureServer
 // for forward compatibility
 type FeatureServer interface {
+	Status(context.Context, *StatusRequest) (*StatusReply, error)
 	Set(context.Context, *SetRequest) (*SetReply, error)
 	Del(context.Context, *DelRequest) (*DelReply, error)
 	Search(context.Context, *SearchRequest) (*SearchReply, error)
@@ -83,6 +94,9 @@ type FeatureServer interface {
 type UnimplementedFeatureServer struct {
 }
 
+func (UnimplementedFeatureServer) Status(context.Context, *StatusRequest) (*StatusReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Status not implemented")
+}
 func (UnimplementedFeatureServer) Set(context.Context, *SetRequest) (*SetReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Set not implemented")
 }
@@ -106,6 +120,24 @@ type UnsafeFeatureServer interface {
 
 func RegisterFeatureServer(s grpc.ServiceRegistrar, srv FeatureServer) {
 	s.RegisterService(&Feature_ServiceDesc, srv)
+}
+
+func _Feature_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FeatureServer).Status(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/feature.Feature/Status",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FeatureServer).Status(ctx, req.(*StatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Feature_Set_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -187,6 +219,10 @@ var Feature_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "feature.Feature",
 	HandlerType: (*FeatureServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Status",
+			Handler:    _Feature_Status_Handler,
+		},
 		{
 			MethodName: "Set",
 			Handler:    _Feature_Set_Handler,

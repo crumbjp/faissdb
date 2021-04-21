@@ -22,6 +22,7 @@ type Dbconfig struct {
 }
 
 type Replicaonfig struct {
+	Id int
 	Listen string
 	Primary string
 }

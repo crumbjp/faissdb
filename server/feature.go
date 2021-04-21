@@ -15,6 +15,16 @@ type RpcFeatureServer struct {
 	pb.UnimplementedFeatureServer
 }
 
+func (self *RpcFeatureServer) Status(ctx context.Context, in *pb.StatusRequest) (*pb.StatusReply, error) {
+	var role int32
+	if IsPrimary() {
+		role = 1
+	} else {
+		role = 2
+	}
+	return &pb.StatusReply{Id: int32(config.Replica.Id), Status: int32(FaissdbStatus), Role: role}, nil
+}
+
 func (self *RpcFeatureServer) Set(ctx context.Context, in *pb.SetRequest) (*pb.SetReply, error) {
 	nStored := 0
 	nError := 0

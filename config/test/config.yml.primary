@@ -29,4 +29,5 @@ oplog:
 feature:
   listen: ":20021"
 replica:
+  id: 1
   listen: ":50021"

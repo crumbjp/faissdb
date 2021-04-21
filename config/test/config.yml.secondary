@@ -29,5 +29,6 @@ oplog:
 feature:
   listen: ":20022"
 replica:
+  id: 2
   listen: ":50022"
   primary: "localhost:50021"
