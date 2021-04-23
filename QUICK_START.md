@@ -18,7 +18,7 @@ docker run \
  -p 9090:9090 \
  -p 20021:20021 \
  -p 50021:50021 \
- faissdb:0.0.1-alpha2 \
+ crumbjp/faissdb:0.0.1-alpha2 \
  /usr/local/faissdb/bin/faissdb /usr/local/faissdb/conf/config.yml.primary
 
 mkdir /tmp/faissdb_secondary
@@ -34,7 +34,7 @@ docker run \
  -p 9091:9091 \
  -p 20022:20022 \
  -p 50022:50022 \
- faissdb:0.0.1-alpha2 \
+ crumbjp/faissdb:0.0.1-alpha2 \
  /usr/local/faissdb/bin/faissdb /usr/local/faissdb/conf/config.yml.secondary
 ```
 

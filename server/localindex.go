@@ -192,8 +192,14 @@ func (self *LocalIndex) IsTrained() (bool) {
 	return self.mainIndex.index.IsTrained()
 }
 
-func (self *LocalIndex) Ntotal() int64 {
-	return self.mainIndex.Ntotal()
+func (self *LocalIndex) Ntotal(collection string) int64 {
+	if collection == "" {
+		return self.mainIndex.Ntotal()
+	}
+	if self.indexes[collection] != nil {
+		return self.indexes[collection].Ntotal()
+	}
+	return 0
 }
 
 func (self *LocalIndex) Open() {
@@ -298,7 +304,7 @@ func (self *LocalIndex) SyncFromLocalDb(start string) {
 		idDB.PutString(strconv.FormatInt(bulkId[bulkCount], 10), string(key.Data()))
 		bulkCount++
 		if bulkCount == bulkSize {
-			log.Println("bulkAdd start", self.Ntotal())
+			log.Println("bulkAdd start", self.Ntotal(""))
 			idxErr := self.mainIndex.AddWithIDs(bulkV, bulkId)
 			if idxErr != nil {
 				log.Println(idxErr)
@@ -317,7 +323,7 @@ func (self *LocalIndex) SyncFromLocalDb(start string) {
 			bulkId = make([]int64, bulkSize)
 			bulkV = make([]float32, config.Db.Faiss.Dimension * bulkSize)
 			bulkCount = 0
-			log.Println("bulkAdd", self.Ntotal())
+			log.Println("bulkAdd", self.Ntotal(""))
 		}
 	}
 	if bulkCount > 0 {

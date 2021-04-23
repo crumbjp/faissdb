@@ -19,10 +19,10 @@ var httpServer *http.Server
 
 type StatusResult struct {
 	Istrained bool
-	Ntotal int64
 	Lastsynced string
 	Lastkey string
 	Faiss Faissconfig
+	Ntotal map[string]int64
 }
 
 // -----------
@@ -37,12 +37,18 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.Method, r.URL.Path)
 	if r.Method == http.MethodGet {
 		if r.URL.Path == "/" {
-			resp, err := json.Marshal(StatusResult{
+			searchResult := StatusResult{
 				Istrained: localIndex.IsTrained(),
-				Ntotal: localIndex.Ntotal(),
 				Faiss: config.Db.Faiss,
 				Lastsynced: 	metaDB.GetString("lastkey"),
-				Lastkey: LastKey()})
+				Lastkey: LastKey(),
+				Ntotal: map[string]int64{},
+			}
+			searchResult.Ntotal["main"] = localIndex.Ntotal("")
+			for _, collection := range config.Db.Faiss.Collections {
+				searchResult.Ntotal[collection] = localIndex.Ntotal(collection)
+			}
+			resp, err := json.Marshal(searchResult)
 			if err != nil {
 				log.Println(err)
 				w.Write([]byte(err.Error()))
