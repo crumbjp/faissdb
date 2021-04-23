@@ -1,13 +1,13 @@
 process:
-  logfile: /tmp/faissdb.log
-  pidfile: /tmp/faissdb.pid
+  logfile: /usr/local/faissdb/log/faissdb.log
+  pidfile: /usr/local/faissdb/tmp/faissdb.pid
   daemon: false
 http:
   port: 9090
   maxconnections: 1000
   httptimeout: 60
 db:
-  dbpath: /tmp/faissdbtest
+  dbpath: /usr/local/faissdb/data
   faiss:
     dimension: 2
     syncinterval: 60000
@@ -25,7 +25,7 @@ db:
   logdb:
     capacity: 1073741824
 oplog:
-  term: 20
+  term: 600
 feature:
   listen: ":20021"
 replica:
