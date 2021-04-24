@@ -11,6 +11,11 @@
 Faiss is one of the most advanced ANN (approximate nearest neighbor) search library.
 However, Faiss is fundamentally designed to working on memory, so it requires complicated ID management and data perpetuation by low layer programing language to using for search platform.
 
+## Use
+- [Quick start (docker)](QUICK_START.md)
+- [Setup development environment(OSQ)](DEVELOPMENT_OSX.md)
+- [Setup development environment(ubuntu)](DEVELOPMENT_UBUNTU.md)
+
 ## Architecture
 ![](img/Architecture.png)
 
