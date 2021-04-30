@@ -46,7 +46,7 @@ func Set(key string, v []float32, collections []string) error {
 func DelRaw(key string, faissdbRecord *pb.FaissdbRecord) {
 	dataDB.Delete(key)
 	idDB.Delete(strconv.FormatInt(faissdbRecord.Id, 10))
-	localIndex.Remove(faissdbRecord.Id)
+	localIndex.Remove(faissdbRecord)
 }
 
 func Del(key string) *pb.FaissdbRecord {
@@ -141,6 +141,6 @@ func FullLocalSync() {
 	log.Println("FullLocalSync()")
 	localIndex.ResetToTrained()
 	idDB.DestroyDb()
-	idDB.Open(config.Db.Iddb)
+	idDB.Open(&config.Db.Iddb)
 	localIndex.SyncFromLocalDb("")
 }

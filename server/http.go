@@ -45,7 +45,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 				Ntotal: map[string]int64{},
 			}
 			searchResult.Ntotal["main"] = localIndex.Ntotal("")
-			for _, collection := range config.Db.Faiss.Collections {
+			for collection, _ := range localIndex.indexes {
 				searchResult.Ntotal[collection] = localIndex.Ntotal(collection)
 			}
 			resp, err := json.Marshal(searchResult)

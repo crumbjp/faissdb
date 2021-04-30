@@ -26,27 +26,17 @@ func (self *RpcReplicaServer) GetTrained(ctx context.Context, in *pb.GetTrainedR
 }
 
 func (self *RpcReplicaServer) GetData(ctx context.Context, in *pb.GetDataRequest) (*pb.GetDataReply, error) {
-	keys, slices, nextKey := GetRawData(in.GetStartkey(), int(in.GetLength()))
-	values := make([][]byte, len(slices))
-	for i, slice := range slices {
-		values[i] = slice.Data()
-		defer slice.Free()
-	}
+	keys, values, nextKey := dataDB.GetRawData(in.GetStartkey(), int(in.GetLength()))
 	return &pb.GetDataReply{Nextkey: nextKey, Keys: keys, Values: values}, nil
 }
 
 func (self *RpcReplicaServer) GetCurrentOplog(ctx context.Context, in *pb.GetCurrentOplogRequest) (*pb.GetCurrentOplogReply, error) {
-	keys, slices, err := GetCurrentOplog(in.GetStartkey(), int(in.GetLength()))
+	logkeys, values, err := GetCurrentOplog(in.GetStartkey(), int(in.GetLength()))
 	if err != nil {
     log.Printf("GetCurrentOplog() %v", err)
 		return nil, err
 	}
-	values := make([][]byte, len(slices))
-	for i, slice := range slices {
-		values[i] = slice.Data()
-		defer slice.Free()
-	}
-	return &pb.GetCurrentOplogReply{Keys: keys, Values: values}, nil
+	return &pb.GetCurrentOplogReply{Keys: logkeys, Values: values}, nil
 }
 
 func InitRpcReplicaServer() {
@@ -213,39 +203,45 @@ func ReplicaFullSync() {
 	ReplicaSync()
 }
 
+func ApplyOplog(oplog *Oplog) error {
+	if oplog.op == OP_SET {
+		faissdbRecord := &pb.FaissdbRecord{}
+		err := DecodeFaissdbRecord(faissdbRecord, oplog.d)
+		if err != nil {
+			log.Printf("ReplicaSync() %v", err)
+			return err
+		}
+		SetRaw(oplog.key, faissdbRecord)
+	} else if oplog.op == OP_DEL {
+		faissdbRecord := &pb.FaissdbRecord{}
+		err := DecodeFaissdbRecord(faissdbRecord, oplog.d)
+		if err != nil {
+			log.Printf("ReplicaSync() %v", err)
+			return err
+		}
+		DelRaw(oplog.key, faissdbRecord)
+	} else if oplog.op == OP_SYSTEM {
+	}
+	return nil
+}
+
 func ReplicaSync() error {
 	for ;; {
 		lastKey := LastKey()
 		log.Printf("ReplicaSync() lastkey: %v", lastKey)
-		keys, values, err := RpcReplicaGetCurrentOplog(lastKey, OPLOG_BULKSIZE)
+		logkeys, values, err := RpcReplicaGetCurrentOplog(lastKey, OPLOG_BULKSIZE)
 		if err != nil {
 			log.Printf("ReplicaSync() %v", err)
 			return err
 		}
 		for i, value := range values {
-			oplog := Oplog{}
+			oplog := &Oplog{}
 			oplog.Decode(value)
-			if oplog.op == OP_SET {
-				faissdbRecord := &pb.FaissdbRecord{}
-				err = DecodeFaissdbRecord(faissdbRecord, oplog.d)
-				if err != nil {
-					log.Printf("ReplicaSync() %v", err)
-					return err
-				}
-				SetRaw(oplog.key, faissdbRecord)
-				PutOplogWithKey(keys[i], OP_SET, oplog.key, oplog.d)
-			} else if oplog.op == OP_DEL {
-				faissdbRecord := &pb.FaissdbRecord{}
-				err = DecodeFaissdbRecord(faissdbRecord, oplog.d)
-				if err != nil {
-					log.Printf("ReplicaSync() %v", err)
-					return err
-				}
-				DelRaw(keys[i], faissdbRecord)
-				PutOplogWithKey(keys[i], OP_DEL, oplog.key, oplog.d)
-			} else if oplog.op == OP_SYSTEM {
-				PutOplogWithKey(keys[i], OP_SYSTEM, oplog.key, oplog.d)
+			err = ApplyOplog(oplog)
+			if err != nil {
+				return err
 			}
+			PutOplogWithKey(logkeys[i], oplog.op, oplog.key, oplog.d)
 		}
 		if len(values) != OPLOG_BULKSIZE {
 			break

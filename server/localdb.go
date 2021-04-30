@@ -26,7 +26,7 @@ func newLocalDB(path string) *LocalDB {
 	return localDb
 }
 
-func (self *LocalDB) Open(dbconfig Dbconfig) {
+func (self *LocalDB) Open(dbconfig *Dbconfig) {
 	self.name = config.Db.Dbpath + self.path
 	self.defaultBlockBasedTableOptions = gorocksdb.NewDefaultBlockBasedTableOptions()
 	self.defaultBlockBasedTableOptions.SetBlockCache(gorocksdb.NewLRUCache(dbconfig.Capacity))
@@ -35,7 +35,7 @@ func (self *LocalDB) Open(dbconfig Dbconfig) {
 	self.defaultOptions.SetCreateIfMissing(true)
 	db, err := gorocksdb.OpenDb(self.defaultOptions, self.name)
 	if err != nil {
-		log.Println("Open() %v", err)
+		log.Printf("Open() %v", err)
 		panic(err)
 	}
 	self.db = db
@@ -117,25 +117,28 @@ func (self *LocalDB) GetInt64(key string) *int64 {
 	return &result
 }
 
-func GetRawData(startKey string, length int) ([]string, []*gorocksdb.Slice, string) {
+func (self *LocalDB) GetRawData(startKey string, length int) ([]string, [][]byte, string) {
 	nextKey := ""
 	keys := make([]string, length)
-	slices := make([]*gorocksdb.Slice, length)
+	values := make([][]byte, length)
 	count := 0
-	it := dataDB.db.NewIterator(dataDB.defaultReadOptions)
+	it := self.db.NewIterator(self.defaultReadOptions)
 	it.Seek([]byte(startKey))
-	defer it.Close()
+	// defer it.Close()
 	for it = it; it.Valid(); it.Next() {
 		key := it.Key()
-		value := it.Value()
 		defer key.Free()
 		if count == length {
 			nextKey = string(key.Data())
 			break
 		}
+		value := it.Value()
+		defer value.Free()
 		keys[count] = string(key.Data())
-		slices[count] = value
+		data := value.Data()
+		values[count] = make([]byte, len(data))
+		copy(values[count], data)
 		count++
 	}
-	return keys[0:count], slices[0:count], nextKey
+	return keys[0:count], values[0:count], nextKey
 }
