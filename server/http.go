@@ -118,10 +118,13 @@ func InitHttpServer() {
 		sig := <-sigs
 		log.Println("Signal: ", sig)
 		setStatus(STATUS_TERMINATING)
+		// TODO: Obtain internal writelock
+		log.Println("Start termination")
 		localIndex.Write()
 		idDB.Close()
 		dataDB.Close()
 		oplogDB.Close()
+		metaDB.Close()
 		httpServer.Close()
 	}()
 	err := httpServer.Serve(limit_listener)

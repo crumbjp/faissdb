@@ -53,12 +53,26 @@ func (self *LocalDB) DestroyDb() {
 	self.db.Close()
 	gorocksdb.DestroyDb(self.name, self.defaultOptions)
 	self.defaultOptions.Destroy()
+	self.defaultBlockBasedTableOptions = nil
+	self.defaultReadOptions = nil
+	self.defaultWriteOptions = nil
+	self.defaultOptions = nil
+	self.db = nil
 }
 
 func (self *LocalDB) Close() {
 	self.rwmutex.Lock()
 	defer self.rwmutex.Unlock()
+	self.defaultBlockBasedTableOptions.Destroy()
+	self.defaultReadOptions.Destroy()
+	self.defaultWriteOptions.Destroy()
 	self.db.Close()
+	self.defaultOptions.Destroy()
+	self.defaultBlockBasedTableOptions = nil
+	self.defaultReadOptions = nil
+	self.defaultWriteOptions = nil
+	self.defaultOptions = nil
+	self.db = nil
 }
 
 func (self *LocalDB) Delete(key string) {
