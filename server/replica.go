@@ -73,7 +73,7 @@ func rpcReplicaConnect() {
 		// rpcClientConnection = nil
 		return
 	}
-	log.Printf("New connection")
+	log.Printf("New connection to %v", config.Replica.Primary)
 	var err error
 	rpcClientConnection, err = grpc.Dial(
 		config.Replica.Primary,
