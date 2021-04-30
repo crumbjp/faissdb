@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"io/ioutil"
 	"encoding/binary"
-	"github.com/tecbot/gorocksdb"
 )
 
 var oplogDB *LocalDB
@@ -106,39 +105,42 @@ func LastKey() string {
 	return lastKey
 }
 
-func GetCurrentOplog(startKey string, length int) ([]string, []*gorocksdb.Slice, error){
-	keys := make([]string, length)
-	slices := make([]*gorocksdb.Slice, length)
+func GetCurrentOplog(startLogkey string, length int) ([]string, [][]byte, error){
+	logkeys := make([]string, length)
+	values := make([][]byte, length)
 	first := true
 	count := 0
 	it := oplogDB.db.NewIterator(oplogDB.defaultReadOptions)
-	it.Seek([]byte(startKey))
+	it.Seek([]byte(startLogkey))
 	defer it.Close()
 	for it = it; it.Valid(); it.Next() {
 		key := it.Key()
 		value := it.Value()
 		defer key.Free()
-		strKey := string(key.Data())
+		defer value.Free()
+		strLogkey := string(key.Data())
 		if first {
-			if startKey != "" && startKey != strKey {
-				return nil, nil, errors.New(fmt.Sprintf("Stale oplog expected: %s  actual: %s", startKey, strKey))
+			if startLogkey != "" && startLogkey != strLogkey {
+				return nil, nil, errors.New(fmt.Sprintf("Stale oplog expected: %s  actual: %s", startLogkey, strLogkey))
 			}
 			first = false
 			continue
 		}
-		keys[count] = strKey
-		slices[count] = value
+		logkeys[count] = strLogkey
+		data := value.Data()
+		values[count] = make([]byte, len(data))
+		copy(values[count], data)
 		count++
 		if count == length {
 			break
 		}
 	}
-	return keys[0:count], slices[0:count], nil
+	return logkeys[0:count], values[0:count], nil
 }
 
 func InitOplog() {
 	oplogDB = newLocalDB("/log")
-	oplogDB.Open(config.Db.Oplogdb)
+	oplogDB.Open(&config.Db.Oplogdb)
 	oplogKeyGenerator = NewIdGenerator()
 	go deleteOpLogThread()
 }

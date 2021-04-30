@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"time"
 	"log"
 	"gopkg.in/yaml.v2"
@@ -14,7 +13,6 @@ type Faissconfig struct {
 	Nprobe int
 	Dimension int
 	Syncinterval time.Duration
-	Collections []string
 }
 
 type Dbconfig struct {
@@ -55,11 +53,7 @@ type Config struct {
 	Replica Replicaonfig
 }
 
-func loadConfig() {
-	configFile := "config.yml"
-	if len(os.Args) > 1 {
-		configFile = os.Args[1]
-	}
+func loadConfig(configFile string) {
 	data, err := ReadFile(configFile)
 	if err != nil {
     log.Fatalf("loadConfig() err1 %v", err)

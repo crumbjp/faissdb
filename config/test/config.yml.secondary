@@ -1,21 +1,19 @@
 process:
-  logfile: /usr/local/faissdb/log/faissdb.log
-  pidfile: /usr/local/faissdb/tmp/faissdb.pid
+  logfile: /tmp/faissdb_secondary/log/faissdb.log
+  pidfile: /tmp/faissdb_secondary/tmp/faissdb.pid
   daemon: false
 http:
   port: 9091
   maxconnections: 1000
   httptimeout: 60
 db:
-  dbpath: /usr/local/faissdb/data
+  dbpath: /tmp/faissdb_secondary/data
   faiss:
     dimension: 2
     syncinterval: 60000
     description: IVF2,PQ2_8
     metric: InnerProduct
     nprobe: 10
-    collections:
-      - weekly
   metadb:
     capacity: 1073741824
   datadb:
@@ -30,5 +28,5 @@ feature:
   listen: ":20022"
 replica:
   id: 2
-  listen: ":50022"
-  primary: "localhost:50021"
+  listen: ":21022"
+  primary: "localhost:21021"

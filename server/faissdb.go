@@ -9,9 +9,10 @@ import (
 )
 
 const (
-	STATUS_STARTUP = 0
-	STATUS_TRAINING = 2
-	STATUS_FULLSYNC = 4
+	STATUS_NONE = 0
+	STATUS_STARTUP = 10
+	STATUS_TRAINING = 20
+	STATUS_FULLSYNC = 30
 	STATUS_READY = 100
 	STATUS_TERMINATING = 255
 
@@ -37,11 +38,11 @@ func start() {
 	setStatus(STATUS_STARTUP)
 	idGenerator = NewIdGenerator()
 	metaDB = newLocalDB("/meta")
-	metaDB.Open(config.Db.Metadb)
+	metaDB.Open(&config.Db.Metadb)
 	dataDB = newLocalDB("/data")
-	dataDB.Open(config.Db.Datadb)
+	dataDB.Open(&config.Db.Datadb)
 	idDB = newLocalDB("/id")
-	idDB.Open(config.Db.Iddb)
+	idDB.Open(&config.Db.Iddb)
 	go InitRpcReplicaServer()
 	InitOplog()
 	InitRpcReplicaClient()
@@ -71,7 +72,11 @@ func start() {
 }
 
 func main() {
-	loadConfig()
+	configFile := "config.yml"
+	if len(os.Args) > 1 {
+		configFile = os.Args[1]
+	}
+	loadConfig(configFile)
 	logfile, err := os.OpenFile(config.Process.Logfile, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("Failure to open logfile %s", config.Process.Logfile)

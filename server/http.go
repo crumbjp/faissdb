@@ -45,7 +45,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 				Ntotal: map[string]int64{},
 			}
 			searchResult.Ntotal["main"] = localIndex.Ntotal("")
-			for _, collection := range config.Db.Faiss.Collections {
+			for collection, _ := range localIndex.indexes {
 				searchResult.Ntotal[collection] = localIndex.Ntotal(collection)
 			}
 			resp, err := json.Marshal(searchResult)
@@ -118,10 +118,13 @@ func InitHttpServer() {
 		sig := <-sigs
 		log.Println("Signal: ", sig)
 		setStatus(STATUS_TERMINATING)
+		// TODO: Obtain internal writelock
+		log.Println("Start termination")
 		localIndex.Write()
 		idDB.Close()
 		dataDB.Close()
 		oplogDB.Close()
+		metaDB.Close()
 		httpServer.Close()
 	}()
 	err := httpServer.Serve(limit_listener)
