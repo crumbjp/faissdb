@@ -44,18 +44,6 @@ func (self *FaissIndex) OpenNew() {
 		metric = faiss.MetricInnerProduct
 	} else if self.config.Metric == "L2" {
 		metric = faiss.MetricL2
-	} else if self.config.Metric == "L1" {
-		metric = faiss.MetricL1
-	} else if self.config.Metric == "Linf" {
-		metric = faiss.MetricLinf
-	} else if self.config.Metric == "Lp" {
-		metric = faiss.MetricLp
-	} else if self.config.Metric == "Canberra" {
-		metric = faiss.MetricCanberra
-	} else if self.config.Metric == "BrayCurtis" {
-		metric = faiss.MetricBrayCurtis
-	} else if self.config.Metric == "JensenShannon" {
-		metric = faiss.MetricJensenShannon
 	}
 	index, err := faiss.IndexFactory(config.Db.Faiss.Dimension, self.config.Description, metric)
 	if err != nil {
