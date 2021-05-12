@@ -116,6 +116,15 @@ func parseSparseV(v []float32, line string) (error) {
 	return nil
 }
 
+func Contains(s []int, e int) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
 func Sha1(in []byte) string {
 	sha1Hash := sha1.New()
 	sha1Hash.Write(in)

@@ -3,7 +3,7 @@
 #### Set ENV
 ```
 export FAISSDB_ROOT=[faissdb repository path]
-FAISSDB_VERSION=0.0.3
+export FAISSDB_VERSION=0.0.3
 ```
 
 #### Get docker image
@@ -73,7 +73,7 @@ docker run \
 
 #### Replica setting
 ```
-curl -v http://localhost:9091/replicaset -XPUT -d '{"replica": "rs", "members": [{"id": 1, "host": "localhost:21021", "primary": true}, {"id": 2, "host": "localhost:21022", "primary": false}, {"id": 3, "host": "localhost:21023", "primary": false}]}'
+curl -v http://localhost:9091/replicaset -XPUT -d '{"replica": "rs", "members": [{"id": 1, "host": "host.docker.internal:21021", "primary": true}, {"id": 2, "host": "host.docker.internal:21022", "primary": false}, {"id": 3, "host": "host.docker.internal:21023", "primary": false}]}'
 ```
 
 

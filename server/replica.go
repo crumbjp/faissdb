@@ -207,7 +207,7 @@ func (self *RpcReplicaServer) PrepareResetReplicaSet(ctx context.Context, in *pb
 }
 
 func (self *RpcReplicaServer) ResetReplicaSet(ctx context.Context, in *pb.ResetReplicaSetRequest) (*pb.ResetReplicaSetReply, error) {
-	err := ResetReplicaSet(in.GetRsts(), []byte(in.GetRsjson()))
+	err := ResetReplicaSet(false, in.GetRsts(), []byte(in.GetRsjson()))
 	if err != nil {
 		log.Println(err)
 	}
@@ -253,15 +253,23 @@ func IsSecondary() bool {
 	return faissdb.selfMember != nil && faissdb.selfMember.Role == ROLE_SECONDARY
 }
 
-func PrepareResetReplicaSet() error {
+func PrepareResetReplicaSet(newPrimaryId int) error {
 	if err := setStatus(STATUS_CONFIGURING); err != nil {
 		return err
 	}
 	for _, replicaMember := range(faissdb.replicaMembers) {
+		if replicaMember.Uuid == faissdb.selfUuid {
+			continue
+		}
 		prepareResetReplicaSetReply, err := replicaMember.PrepareResetReplicaSet()
 		if err != nil {
-			rollbackStatus()
-			return err
+			faissdb.logger.Error("PrepareResetReplicaSet() replicaMember.PrepareResetReplicaSet() %v", err)
+			if newPrimaryId == replicaMember.Id {
+				rollbackStatus()
+				return err
+			} else {
+				continue
+			}
 		}
 		if int(prepareResetReplicaSetReply.GetStatus()) != STATUS_CONFIGURING {
 			return errors.New(fmt.Sprintf("PrepareResetReplicaSet() unexpected status %v", prepareResetReplicaSetReply.GetStatus()))
@@ -273,12 +281,42 @@ func PrepareResetReplicaSet() error {
 	return nil
 }
 
-func ResetReplicaSet(rsts int64, jsonBytes []byte) error {
-	var newReplicaSet ReplicaSet
-	if err := json.Unmarshal(jsonBytes, &newReplicaSet); err != nil {
-		return err
-	}
+func ResetReplicaSet(initiative bool, rsts int64, jsonBytes []byte) error {
 	if faissdb.rsTs < rsts {
+		var newReplicaSet ReplicaSet
+		if err := json.Unmarshal(jsonBytes, &newReplicaSet); err != nil {
+			return err
+		}
+		if initiative {
+			// Validate
+			var newPrimary *ReplicaSetMember
+			var ids []int
+			for i, member := range(newReplicaSet.Members) {
+				if Contains(ids, member.Id) {
+					return errors.New(fmt.Sprintf("ResetReplicaSet() multiple Id %d", member.Id))
+				}
+				ids = append(ids, member.Id)
+				if member.Primary {
+					if newPrimary != nil {
+						return errors.New(fmt.Sprintf("ResetReplicaSet() multiple Primaries (%d, %d)", newPrimary.Id, member.Id))
+					}
+					newPrimary = &newReplicaSet.Members[i]
+				}
+				if faissdb.replicaMembers[member.Id] != nil && faissdb.replicaMembers[member.Id].Host != member.Host {
+					return errors.New(fmt.Sprintf("ResetReplicaSet() Unmatch ID:Host current: %d:%s, new: %d:%s)",
+						faissdb.replicaMembers[member.Id].Id,
+						faissdb.replicaMembers[member.Id].Host,
+						member.Id,
+						member.Host))
+				}
+			}
+			if newPrimary == nil {
+				return errors.New(fmt.Sprintf("ResetReplicaSet() No Primary"))
+			}
+			if err := PrepareResetReplicaSet(newPrimary.Id) ; err != nil {
+				return err
+			}
+		}
 		faissdb.metaDB.PutInt64("ReplicaSetTs", rsts)
 		faissdb.metaDB.PutString("ReplicaSet", string(jsonBytes))
 		InitReplicaSet()
@@ -303,7 +341,7 @@ func checkReplicaSet(force bool) bool {
 		if replicaMember.Uuid == faissdb.selfUuid {
 			faissdb.selfMember = replicaMember
 		} else if faissdb.rsTs < getStatusReply.GetRsts() {
-			if err := ResetReplicaSet(getStatusReply.GetRsts(), []byte(getStatusReply.GetRsjson())); err != nil {
+			if err := ResetReplicaSet(false, getStatusReply.GetRsts(), []byte(getStatusReply.GetRsjson())); err != nil {
 				log.Println(err)
 			}
 			return false
@@ -357,18 +395,17 @@ func InitReplicaSet() {
 	for _, replicaMember := range(faissdb.replicaMembers) {
 		replicaMember.Close()
 	}
-	faissdb.replicaMembers = []*ReplicaMember{}
+	faissdb.replicaMembers = map[int]*ReplicaMember{}
 	faissdb.selfMember = nil
 	faissdb.primaryMember = nil
 	faissdb.secondaryMembers = []*ReplicaMember{}
-	faissdb.replicaMembers = make([]*ReplicaMember, len(faissdb.replicaSet.Members))
-	for i, member := range(faissdb.replicaSet.Members) {
-		faissdb.replicaMembers[i] = &ReplicaMember{Id: member.Id, Host: member.Host}
-		faissdb.replicaMembers[i].Connect()
+	for _, member := range(faissdb.replicaSet.Members) {
+		faissdb.replicaMembers[member.Id] = &ReplicaMember{Id: member.Id, Host: member.Host}
+		faissdb.replicaMembers[member.Id].Connect()
 		if member.Primary {
-			faissdb.replicaMembers[i].Role = ROLE_PRIMARY
+			faissdb.replicaMembers[member.Id].Role = ROLE_PRIMARY
 		} else {
-			faissdb.replicaMembers[i].Role = ROLE_SECONDARY
+			faissdb.replicaMembers[member.Id].Role = ROLE_SECONDARY
 		}
 	}
 	checkReplicaSet(true)

@@ -76,12 +76,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(500)
 				return
 			}
-			if err := PrepareResetReplicaSet() ; err != nil {
-				faissdb.logger.Info("httpHandler() PrepareResetReplicaSet() %v", err)
-				w.WriteHeader(500)
-				return
-			}
-			if err := ResetReplicaSet(time.Now().UnixNano(), body) ; err != nil {
+			if err := ResetReplicaSet(true, time.Now().UnixNano(), body) ; err != nil {
 				faissdb.logger.Info("httpHandler() ResetReplicaSet() %v", err)
 				w.WriteHeader(500)
 				return

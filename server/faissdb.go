@@ -42,7 +42,7 @@ type Faissdb struct {
 	oplogDB *LocalDB
 	httpServer *http.Server
 	replicaSet *ReplicaSet
-	replicaMembers []*ReplicaMember
+	replicaMembers map[int]*ReplicaMember
 	selfMember *ReplicaMember
 	primaryMember *ReplicaMember
 	secondaryMembers []*ReplicaMember
