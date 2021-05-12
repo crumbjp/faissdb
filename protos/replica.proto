@@ -5,10 +5,43 @@ option go_package = "github.com/crumbjp/faissdb/server/rpcreplica";
 package replica;
 
 service Replica {
+  rpc PrepareResetReplicaSet (PrepareResetReplicaSetRequest) returns (PrepareResetReplicaSetReply) {}
+  rpc ResetReplicaSet (ResetReplicaSetRequest) returns (ResetReplicaSetReply) {}
+  rpc GetStatus (GetStatusRequest) returns (GetStatusReply) {}
   rpc GetLastKey (GetLastKeyRequest) returns (GetLastKeyReply) {}
   rpc GetTrained (GetTrainedRequest) returns (GetTrainedReply) {}
   rpc GetData (GetDataRequest) returns (GetDataReply) {}
   rpc GetCurrentOplog (GetCurrentOplogRequest) returns (GetCurrentOplogReply) {}
+}
+
+
+message PrepareResetReplicaSetRequest {
+}
+
+message PrepareResetReplicaSetReply {
+  int32 status = 1;
+  string lastkey = 2;
+}
+
+message ResetReplicaSetRequest {
+  int64 rsts = 1;
+  string rsjson = 2;
+}
+
+message ResetReplicaSetReply {
+  int64 rsts = 1;
+}
+
+message GetStatusRequest {
+  int64 rsts = 1;
+}
+
+message GetStatusReply {
+  int64 rsts = 1;
+  string uuid = 2;
+  string rsjson = 3;
+  int32 status = 4;
+  string lastkey = 5;
 }
 
 message GetLastKeyRequest {

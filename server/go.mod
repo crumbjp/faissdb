@@ -8,6 +8,7 @@ replace local.packages/go-faiss => ../go-faiss
 
 require (
 	github.com/crumbjp/faissdb/server v0.0.0-00010101000000-000000000000
+	github.com/google/uuid v1.1.2
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/sevlyar/go-daemon v0.1.5
 	github.com/stretchr/testify v1.5.1

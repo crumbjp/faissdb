@@ -17,16 +17,17 @@ var vectorIds []int64
 var faissIndex *FaissIndex
 func TestMain(m *testing.M) {
 	fmt.Println("------ TestMain() -------")
-	loadConfig("../config/test/config.yml.primary")
-	idGenerator = NewIdGenerator()
-	rwmutex = sync.RWMutex{}
+	loadConfig("../config/test/config1.yml")
+	InitLogger(config.Process.Logfile)
+	faissdb.idGenerator = NewIdGenerator()
+	faissdb.rwmutex = sync.RWMutex{}
 	setStatus(STATUS_STARTUP)
-	metaDB = newLocalDB("/meta")
-	metaDB.Open(&config.Db.Metadb)
-	dataDB = newLocalDB("/data")
-	dataDB.Open(&config.Db.Datadb)
-	idDB = newLocalDB("/id")
-	idDB.Open(&config.Db.Iddb)
+	faissdb.metaDB = newLocalDB("/meta")
+	faissdb.metaDB.Open(&config.Db.Metadb)
+	faissdb.dataDB = newLocalDB("/data")
+	faissdb.dataDB.Open(&config.Db.Datadb)
+	faissdb.idDB = newLocalDB("/id")
+	faissdb.idDB.Open(&config.Db.Iddb)
 	InitOplog()
 
 	faissIndex = newFaissIndex(TEST_FAISS_INDEX_NAME)

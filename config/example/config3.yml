@@ -3,7 +3,7 @@ process:
   pidfile: /usr/local/faissdb/tmp/faissdb.pid
   daemon: false
 http:
-  port: 9091
+  port: 9093
   maxconnections: 1000
   httptimeout: 60
 db:
@@ -25,8 +25,6 @@ db:
 oplog:
   term: 3600
 feature:
-  listen: ":20022"
+  listen: ":20023"
 replica:
-  id: 2
-  listen: ":21022"
-  primary: "host.docker.internal:21021"
+  listen: ":21023"

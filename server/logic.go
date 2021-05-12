@@ -6,7 +6,6 @@ import (
 	"errors"
 	"math/rand"
 	"container/list"
-	"log"
 	pb "github.com/crumbjp/faissdb/server/grpc_replica"
 )
 
@@ -15,19 +14,19 @@ func setId(key string, faissdbRecord *pb.FaissdbRecord) {
 	if deletedRecord != nil {
 		faissdbRecord.Id = deletedRecord.Id
 	} else {
-		faissdbRecord.Id = idGenerator.Generate()
+		faissdbRecord.Id = faissdb.idGenerator.Generate()
 	}
 }
 
 func SetRaw(key string, faissdbRecord *pb.FaissdbRecord) []byte {
-	rwmutex.Lock()
-	defer rwmutex.Unlock()
+	faissdb.rwmutex.Lock()
+	defer faissdb.rwmutex.Unlock()
 	encoded, err := EncodeFaissdbRecord(faissdbRecord)
 	if err != nil {
 		panic(err)
 	}
-	dataDB.Put(key, encoded)
-	idDB.PutString(strconv.FormatInt(faissdbRecord.Id, 10), key)
+	faissdb.dataDB.Put(key, encoded)
+	faissdb.idDB.PutString(strconv.FormatInt(faissdbRecord.Id, 10), key)
 	localIndex.Add(faissdbRecord)
 	return encoded
 }
@@ -35,7 +34,7 @@ func SetRaw(key string, faissdbRecord *pb.FaissdbRecord) []byte {
 func Set(key string, v []float32, collections []string) error {
 	faissdbRecord := pb.FaissdbRecord{V: v, Collections: collections}
 	if(len(faissdbRecord.V) != config.Db.Faiss.Dimension) {
-		return errors.New(fmt.Sprintf("Invalid dimensions expected: %d actual: %d", config.Db.Faiss.Dimension, len(faissdbRecord.V)))
+		return errors.New(fmt.Sprintf("Set() Invalid dimensions expected: %d actual: %d", config.Db.Faiss.Dimension, len(faissdbRecord.V)))
 	}
 	setId(key, &faissdbRecord)
 	encoded := SetRaw(key, &faissdbRecord)
@@ -44,15 +43,21 @@ func Set(key string, v []float32, collections []string) error {
 }
 
 func DelRaw(key string, faissdbRecord *pb.FaissdbRecord) {
-	dataDB.Delete(key)
-	idDB.Delete(strconv.FormatInt(faissdbRecord.Id, 10))
+	performDataDB := faissdb.logger.PerformStart("DelRaw dataDB")
+	faissdb.dataDB.Delete(key)
+	faissdb.logger.PerformEnd("DelRaw dataDB", performDataDB)
+	performIdDB := faissdb.logger.PerformStart("DelRaw idDB")
+	faissdb.idDB.Delete(strconv.FormatInt(faissdbRecord.Id, 10))
+	faissdb.logger.PerformEnd("DelRaw idDB", performIdDB)
+	performLocalIndex := faissdb.logger.PerformStart("DelRaw localIndex")
 	localIndex.Remove(faissdbRecord)
+	faissdb.logger.PerformEnd("DelRaw localIndex", performLocalIndex)
 }
 
 func Del(key string) *pb.FaissdbRecord {
-	rwmutex.Lock()
-	defer rwmutex.Unlock()
-	value := dataDB.Get(key)
+	faissdb.rwmutex.Lock()
+	defer faissdb.rwmutex.Unlock()
+	value := faissdb.dataDB.Get(key)
 	defer value.Free()
 	valueData := value.Data()
 	if(valueData != nil) {
@@ -82,7 +87,7 @@ func Search(collection string, v []float32, n int64) ([]SearchResult) {
 	for i := 0 ; i < len(distances); i++ {
 		if labels[i] != -1 {
 			searchResults[count].distance = distances[i]
-			searchResults[count].key = string(idDB.GetString(strconv.FormatInt(labels[i], 10)))
+			searchResults[count].key = string(faissdb.idDB.GetString(strconv.FormatInt(labels[i], 10)))
 			count++
 		}
 	}
@@ -91,9 +96,9 @@ func Search(collection string, v []float32, n int64) ([]SearchResult) {
 
 func buildTrainData(proportion float32) ([]float32) {
 	keys := list.New()
-	dataDB.rwmutex.RLock()
-	defer dataDB.rwmutex.RUnlock()
-	it := dataDB.db.NewIterator(dataDB.defaultReadOptions)
+	faissdb.dataDB.rwmutex.RLock()
+	defer faissdb.dataDB.rwmutex.RUnlock()
+	it := faissdb.dataDB.db.NewIterator(faissdb.dataDB.defaultReadOptions)
 	it.Seek([]byte(""))
 	defer it.Close()
 	for it = it; it.Valid(); it.Next() {
@@ -106,7 +111,7 @@ func buildTrainData(proportion float32) ([]float32) {
 	count := 0
 	trainData := make([]float32, config.Db.Faiss.Dimension * keys.Len())
 	for element := keys.Front(); element != nil; element = element.Next() {
-		value := dataDB.Get(element.Value.(string))
+		value := faissdb.dataDB.Get(element.Value.(string))
 		defer value.Free()
 		valueData := value.Data()
 		v := trainData[(count * config.Db.Faiss.Dimension):((count+1)*config.Db.Faiss.Dimension)]
@@ -123,24 +128,32 @@ func Train(proportion float32, force bool) error {
 	if !force && localIndex.IsTrained() {
 		return nil
 	}
-	err := setStatus(STATUS_TRAINING)
-	if err != nil {
+	if err := setStatus(STATUS_TRAINING); err != nil {
 		return err
 	}
-	log.Println("Build train data")
+	faissdb.logger.Info("Train() Build data")
 	trainData := buildTrainData(proportion)
-	log.Println(fmt.Sprintf("Train start (%d)", len(trainData) / config.Db.Faiss.Dimension))
+	faissdb.logger.Info("Train() Train start (%d)", len(trainData) / config.Db.Faiss.Dimension)
 	localIndex.Train(trainData)
-	FullLocalSync()
-	setStatus(STATUS_READY)
-	log.Println("Train end")
+	if err := FullLocalSync(); err != nil {
+		return err
+	}
+	faissdb.logger.Info("Train end")
 	return nil
 }
 
-func FullLocalSync() {
-	log.Println("FullLocalSync()")
+func FullLocalSync() error {
+	faissdb.logger.Info("FullLocalSync() start")
+	defer faissdb.logger.Info("FullLocalSync() end")
+	if err := setStatus(STATUS_FULLSYNC); err != nil {
+		return err
+	}
 	localIndex.ResetToTrained()
-	idDB.DestroyDb()
-	idDB.Open(&config.Db.Iddb)
+	faissdb.idDB.DestroyDb()
+	faissdb.idDB.Open(&config.Db.Iddb)
 	localIndex.SyncFromLocalDb("")
+	if err := setStatus(STATUS_READY); err != nil {
+		return err
+	}
+	return nil
 }

@@ -1,73 +1,115 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 	"errors"
 	"sync"
-	"log"
+	"time"
 	"github.com/sevlyar/go-daemon"
+	"github.com/google/uuid"
+	"net/http"
 )
 
 const (
 	STATUS_NONE = 0
 	STATUS_STARTUP = 10
+	STATUS_CONFIGURING = 15
 	STATUS_TRAINING = 20
 	STATUS_FULLSYNC = 30
 	STATUS_READY = 100
 	STATUS_TERMINATING = 255
-
 )
-var metaDB *LocalDB
-var dataDB *LocalDB
-var idDB *LocalDB
-var rwmutex sync.RWMutex
-var FaissdbStatus int
-var idGenerator *IdGenerator
+
+const (
+	CHECK_REPLICASET_INTERVAL = 60000
+)
+
+type Faissdb struct {
+	firstSync bool
+	selfUuid string
+	logger *Logger
+	metaDB *LocalDB
+	dataDB *LocalDB
+	idDB *LocalDB
+	rwmutex sync.RWMutex
+	status int
+	prevStatus int
+	idGenerator *IdGenerator
+	oplogKeyGenerator *IdGenerator
+	oplogDB *LocalDB
+	httpServer *http.Server
+	replicaSet *ReplicaSet
+	replicaMembers []*ReplicaMember
+	selfMember *ReplicaMember
+	primaryMember *ReplicaMember
+	secondaryMembers []*ReplicaMember
+	lastCheckedAt time.Time
+	rsJson string
+	rsTs int64
+	replicaSyncMutex sync.Mutex
+}
+var faissdb Faissdb
 
 func setStatus(status int) error {
-	if FaissdbStatus == STATUS_TERMINATING {
-		return errors.New("Terminating now")
+	if faissdb.status == status {
+		return nil
 	}
-	FaissdbStatus = status
+	if faissdb.status == STATUS_TERMINATING {
+		return errors.New("setStatus() Terminating now")
+	}
+	if status == STATUS_CONFIGURING {
+		if faissdb.status != STATUS_READY && faissdb.status != STATUS_STARTUP {
+			return errors.New(fmt.Sprintf("setStatus() Not ready %v", faissdb.status))
+		}
+	}
+	faissdb.prevStatus = faissdb.status
+	faissdb.status = status
 	return nil
 }
 
+func rollbackStatus() {
+	faissdb.status = faissdb.prevStatus
+}
+
 func start() {
-	log.Println("start()")
-	rwmutex = sync.RWMutex{}
+	faissdb.selfUuid = uuid.New().String()
+	faissdb.logger.Debug("start() %s", faissdb.selfUuid)
+	faissdb.rwmutex = sync.RWMutex{}
+	faissdb.replicaSyncMutex = sync.Mutex{}
 	setStatus(STATUS_STARTUP)
-	idGenerator = NewIdGenerator()
-	metaDB = newLocalDB("/meta")
-	metaDB.Open(&config.Db.Metadb)
-	dataDB = newLocalDB("/data")
-	dataDB.Open(&config.Db.Datadb)
-	idDB = newLocalDB("/id")
-	idDB.Open(&config.Db.Iddb)
+	faissdb.idGenerator = NewIdGenerator()
+	faissdb.metaDB = newLocalDB("/meta")
+	faissdb.metaDB.Open(&config.Db.Metadb)
+	faissdb.dataDB = newLocalDB("/data")
+	faissdb.dataDB.Open(&config.Db.Datadb)
+	faissdb.idDB = newLocalDB("/id")
+	faissdb.idDB.Open(&config.Db.Iddb)
 	go InitRpcReplicaServer()
 	InitOplog()
-	InitRpcReplicaClient()
-	if IsPrimary() {
-		InitLocalIndex()
-		GapSyncLocalIndex()
-	} else {
-		InitLocalIndex()
-		lastKey := LastKey()
-		if lastKey == "" {
-			ReplicaFullSync()
-		} else {
-			GapSyncLocalIndex()
-			masterLastKey, err := RpcReplicaGetLastKey()
-			if err != nil {
-				log.Fatalf("No master %v", err)
-			}
-			if masterLastKey != lastKey {
-				ReplicaSync()
-			}
-		}
-		go InitReplicaSyncThread()
-	}
-	setStatus(STATUS_READY)
+	InitLocalIndex()
+	GapSyncLocalIndex()
+	go InitReplicaSyncThread()
+	InitReplicaSet()
 	go InitRpcFeatureServer()
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-sigs
+		faissdb.logger.Info("SIGNAL: %v", sig)
+		setStatus(STATUS_TERMINATING)
+		// TODO: Obtain internal writelock
+		faissdb.logger.Info("Termination start")
+		localIndex.Write()
+		faissdb.idDB.Close()
+		faissdb.dataDB.Close()
+		faissdb.oplogDB.Close()
+		faissdb.metaDB.Close()
+		faissdb.httpServer.Close()
+		faissdb.logger.Info("Termination end")
+	}()
 	InitHttpServer()
 }
 
@@ -77,11 +119,7 @@ func main() {
 		configFile = os.Args[1]
 	}
 	loadConfig(configFile)
-	logfile, err := os.OpenFile(config.Process.Logfile, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
-	if err != nil {
-		log.Fatalf("Failure to open logfile %s", config.Process.Logfile)
-	}
-	log.SetOutput(logfile)
+	InitLogger(config.Process.Logfile)
 	if config.Process.Daemon {
 		context := &daemon.Context{
 			PidFileName: config.Process.Pidfile,
@@ -90,7 +128,7 @@ func main() {
 		}
 		child, err := context.Reborn()
 		if err != nil {
-			log.Fatalln(err)
+			faissdb.logger.Fatal("%v", err)
 		}
 		if child != nil {
 			return
@@ -100,5 +138,5 @@ func main() {
 	} else {
 		start()
 	}
-	log.Println("main() end")
+	faissdb.logger.Info("main() end")
 }

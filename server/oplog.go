@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"fmt"
 	"time"
 	"errors"
@@ -9,9 +8,6 @@ import (
 	"io/ioutil"
 	"encoding/binary"
 )
-
-var oplogDB *LocalDB
-var oplogKeyGenerator *IdGenerator
 
 type Oplog struct {
 	op int8
@@ -70,13 +66,13 @@ func (self *Oplog) Decode(b []byte) error {
 func deleteOpLogThread() {
 	for ;; {
 		time.Sleep(10000 * time.Millisecond)
-		if FaissdbStatus == STATUS_READY {
+		if faissdb.status == STATUS_READY {
 			continue
 		}
 		deleteMs := (time.Now().UnixNano() / 1000000) - (int64(config.Oplog.Term) * 1000)
 		lastKey :=	LastKey()
-		deleteLastKey := oplogKeyGenerator.Str(oplogKeyGenerator.Mix(deleteMs, 0))
-		it := oplogDB.db.NewIterator(dataDB.defaultReadOptions)
+		deleteLastKey := faissdb.oplogKeyGenerator.Str(faissdb.oplogKeyGenerator.Mix(deleteMs, 0))
+		it := faissdb.oplogDB.db.NewIterator(faissdb.dataDB.defaultReadOptions)
 		it.Seek([]byte(""))
 		defer it.Close()
 		for it = it; it.Valid(); it.Next() {
@@ -89,7 +85,7 @@ func deleteOpLogThread() {
 			if deleteLastKey <= oplogKey {
 				break
 			}
-			oplogDB.Delete(oplogKey)
+			faissdb.oplogDB.Delete(oplogKey)
 		}
 		if IsPrimary() {
 			PutOplog(OP_SYSTEM, "", []byte("deleteOpLogThread"))
@@ -98,7 +94,7 @@ func deleteOpLogThread() {
 }
 
 func LastKey() string {
-	it := oplogDB.db.NewIterator(dataDB.defaultReadOptions)
+	it := faissdb.oplogDB.db.NewIterator(faissdb.dataDB.defaultReadOptions)
 	it.SeekToLast()
 	lastKey := string(it.Key().Data())
 	defer it.Close()
@@ -110,7 +106,7 @@ func GetCurrentOplog(startLogkey string, length int) ([]string, [][]byte, error)
 	values := make([][]byte, length)
 	first := true
 	count := 0
-	it := oplogDB.db.NewIterator(oplogDB.defaultReadOptions)
+	it := faissdb.oplogDB.db.NewIterator(faissdb.oplogDB.defaultReadOptions)
 	it.Seek([]byte(startLogkey))
 	defer it.Close()
 	for it = it; it.Valid(); it.Next() {
@@ -121,7 +117,7 @@ func GetCurrentOplog(startLogkey string, length int) ([]string, [][]byte, error)
 		strLogkey := string(key.Data())
 		if first {
 			if startLogkey != "" && startLogkey != strLogkey {
-				return nil, nil, errors.New(fmt.Sprintf("Stale oplog expected: %s  actual: %s", startLogkey, strLogkey))
+				return nil, nil, errors.New(fmt.Sprintf("GetCurrentOplog() Stale oplog expected: %s  actual: %s", startLogkey, strLogkey))
 			}
 			first = false
 			continue
@@ -139,30 +135,30 @@ func GetCurrentOplog(startLogkey string, length int) ([]string, [][]byte, error)
 }
 
 func InitOplog() {
-	oplogDB = newLocalDB("/log")
-	oplogDB.Open(&config.Db.Oplogdb)
-	oplogKeyGenerator = NewIdGenerator()
+	faissdb.oplogDB = newLocalDB("/log")
+	faissdb.oplogDB.Open(&config.Db.Oplogdb)
+	faissdb.oplogKeyGenerator = NewIdGenerator()
 	go deleteOpLogThread()
 }
 
 func PutOplogWithKey(logKey string, op int8, key string, d []byte) {
 	oplog := Oplog{op: op, key: key, d: d}
 	encodedOplog, _ := oplog.Encode()
-	oplogDB.Put(logKey, encodedOplog)
+	faissdb.oplogDB.Put(logKey, encodedOplog)
 }
 
 func PutOplog(op int8, key string, d []byte) {
-	logKey := oplogKeyGenerator.GenerateString()
+	logKey := faissdb.oplogKeyGenerator.GenerateString()
 	PutOplogWithKey(logKey, op, key, d)
 }
 
 func ReadFaissTrained() ([]byte, error) {
-	if FaissdbStatus == STATUS_TRAINING {
-		return nil, errors.New("Training now")
+	if faissdb.status == STATUS_TRAINING {
+		return nil, errors.New("ReadFaissTrained() Training now")
 	}
 	data, err := ReadFile(TrainedFilePath())
 	if err != nil {
-    log.Printf("ReadFaissTrained() %v", err)
+    faissdb.logger.Error("ReadFaissTrained() ReadFile(TrainedFilePath()) %v", err)
 	}
 	return data, err
 }
