@@ -3,7 +3,7 @@ process:
   pidfile: /usr/local/faissdb/tmp/faissdb.pid
   daemon: false
 http:
-  port: 9090
+  port: 9091
   maxconnections: 1000
   httptimeout: 60
 db:
@@ -27,5 +27,4 @@ oplog:
 feature:
   listen: ":20021"
 replica:
-  id: 1
   listen: ":21021"

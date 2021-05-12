@@ -18,6 +18,9 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ReplicaClient interface {
+	PrepareResetReplicaSet(ctx context.Context, in *PrepareResetReplicaSetRequest, opts ...grpc.CallOption) (*PrepareResetReplicaSetReply, error)
+	ResetReplicaSet(ctx context.Context, in *ResetReplicaSetRequest, opts ...grpc.CallOption) (*ResetReplicaSetReply, error)
+	GetStatus(ctx context.Context, in *GetStatusRequest, opts ...grpc.CallOption) (*GetStatusReply, error)
 	GetLastKey(ctx context.Context, in *GetLastKeyRequest, opts ...grpc.CallOption) (*GetLastKeyReply, error)
 	GetTrained(ctx context.Context, in *GetTrainedRequest, opts ...grpc.CallOption) (*GetTrainedReply, error)
 	GetData(ctx context.Context, in *GetDataRequest, opts ...grpc.CallOption) (*GetDataReply, error)
@@ -30,6 +33,33 @@ type replicaClient struct {
 
 func NewReplicaClient(cc grpc.ClientConnInterface) ReplicaClient {
 	return &replicaClient{cc}
+}
+
+func (c *replicaClient) PrepareResetReplicaSet(ctx context.Context, in *PrepareResetReplicaSetRequest, opts ...grpc.CallOption) (*PrepareResetReplicaSetReply, error) {
+	out := new(PrepareResetReplicaSetReply)
+	err := c.cc.Invoke(ctx, "/replica.Replica/PrepareResetReplicaSet", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *replicaClient) ResetReplicaSet(ctx context.Context, in *ResetReplicaSetRequest, opts ...grpc.CallOption) (*ResetReplicaSetReply, error) {
+	out := new(ResetReplicaSetReply)
+	err := c.cc.Invoke(ctx, "/replica.Replica/ResetReplicaSet", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *replicaClient) GetStatus(ctx context.Context, in *GetStatusRequest, opts ...grpc.CallOption) (*GetStatusReply, error) {
+	out := new(GetStatusReply)
+	err := c.cc.Invoke(ctx, "/replica.Replica/GetStatus", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *replicaClient) GetLastKey(ctx context.Context, in *GetLastKeyRequest, opts ...grpc.CallOption) (*GetLastKeyReply, error) {
@@ -72,6 +102,9 @@ func (c *replicaClient) GetCurrentOplog(ctx context.Context, in *GetCurrentOplog
 // All implementations must embed UnimplementedReplicaServer
 // for forward compatibility
 type ReplicaServer interface {
+	PrepareResetReplicaSet(context.Context, *PrepareResetReplicaSetRequest) (*PrepareResetReplicaSetReply, error)
+	ResetReplicaSet(context.Context, *ResetReplicaSetRequest) (*ResetReplicaSetReply, error)
+	GetStatus(context.Context, *GetStatusRequest) (*GetStatusReply, error)
 	GetLastKey(context.Context, *GetLastKeyRequest) (*GetLastKeyReply, error)
 	GetTrained(context.Context, *GetTrainedRequest) (*GetTrainedReply, error)
 	GetData(context.Context, *GetDataRequest) (*GetDataReply, error)
@@ -83,6 +116,15 @@ type ReplicaServer interface {
 type UnimplementedReplicaServer struct {
 }
 
+func (UnimplementedReplicaServer) PrepareResetReplicaSet(context.Context, *PrepareResetReplicaSetRequest) (*PrepareResetReplicaSetReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PrepareResetReplicaSet not implemented")
+}
+func (UnimplementedReplicaServer) ResetReplicaSet(context.Context, *ResetReplicaSetRequest) (*ResetReplicaSetReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResetReplicaSet not implemented")
+}
+func (UnimplementedReplicaServer) GetStatus(context.Context, *GetStatusRequest) (*GetStatusReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetStatus not implemented")
+}
 func (UnimplementedReplicaServer) GetLastKey(context.Context, *GetLastKeyRequest) (*GetLastKeyReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLastKey not implemented")
 }
@@ -106,6 +148,60 @@ type UnsafeReplicaServer interface {
 
 func RegisterReplicaServer(s grpc.ServiceRegistrar, srv ReplicaServer) {
 	s.RegisterService(&Replica_ServiceDesc, srv)
+}
+
+func _Replica_PrepareResetReplicaSet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PrepareResetReplicaSetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ReplicaServer).PrepareResetReplicaSet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/replica.Replica/PrepareResetReplicaSet",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ReplicaServer).PrepareResetReplicaSet(ctx, req.(*PrepareResetReplicaSetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Replica_ResetReplicaSet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResetReplicaSetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ReplicaServer).ResetReplicaSet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/replica.Replica/ResetReplicaSet",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ReplicaServer).ResetReplicaSet(ctx, req.(*ResetReplicaSetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Replica_GetStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ReplicaServer).GetStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/replica.Replica/GetStatus",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ReplicaServer).GetStatus(ctx, req.(*GetStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Replica_GetLastKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -187,6 +283,18 @@ var Replica_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "replica.Replica",
 	HandlerType: (*ReplicaServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "PrepareResetReplicaSet",
+			Handler:    _Replica_PrepareResetReplicaSet_Handler,
+		},
+		{
+			MethodName: "ResetReplicaSet",
+			Handler:    _Replica_ResetReplicaSet_Handler,
+		},
+		{
+			MethodName: "GetStatus",
+			Handler:    _Replica_GetStatus_Handler,
+		},
 		{
 			MethodName: "GetLastKey",
 			Handler:    _Replica_GetLastKey_Handler,

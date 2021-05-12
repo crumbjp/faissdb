@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"sync"
 	"github.com/tecbot/gorocksdb"
 	"encoding/binary"
@@ -27,6 +26,8 @@ func newLocalDB(path string) *LocalDB {
 }
 
 func (self *LocalDB) Open(dbconfig *Dbconfig) {
+	faissdb.logger.Info("LocalDB[%s].Open() start", self.name)
+	defer faissdb.logger.Info("LocalDB[%s].Open() end", self.name)
 	self.name = config.Db.Dbpath + self.path
 	self.defaultBlockBasedTableOptions = gorocksdb.NewDefaultBlockBasedTableOptions()
 	self.defaultBlockBasedTableOptions.SetBlockCache(gorocksdb.NewLRUCache(dbconfig.Capacity))
@@ -35,8 +36,7 @@ func (self *LocalDB) Open(dbconfig *Dbconfig) {
 	self.defaultOptions.SetCreateIfMissing(true)
 	db, err := gorocksdb.OpenDb(self.defaultOptions, self.name)
 	if err != nil {
-		log.Printf("Open() %v", err)
-		panic(err)
+		faissdb.logger.Fatal("LocalDB[%s].Open() gorocksdb.OpenDb() %v", self.name, err)
 	}
 	self.db = db
 	self.defaultReadOptions = gorocksdb.NewDefaultReadOptions()
@@ -45,6 +45,8 @@ func (self *LocalDB) Open(dbconfig *Dbconfig) {
 }
 
 func (self *LocalDB) DestroyDb() {
+	faissdb.logger.Info("LocalDB[%s].DestroyDb() start", self.name)
+	defer faissdb.logger.Info("LocalDB[%s].DestroyDb() end", self.name)
 	self.rwmutex.Lock()
 	defer self.rwmutex.Unlock()
 	self.defaultBlockBasedTableOptions.Destroy()
@@ -61,6 +63,8 @@ func (self *LocalDB) DestroyDb() {
 }
 
 func (self *LocalDB) Close() {
+	faissdb.logger.Info("LocalDB[%s].Close() start", self.name)
+	defer faissdb.logger.Info("LocalDB[%s].Close() end", self.name)
 	self.rwmutex.Lock()
 	defer self.rwmutex.Unlock()
 	self.defaultBlockBasedTableOptions.Destroy()

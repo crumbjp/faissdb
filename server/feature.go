@@ -3,7 +3,6 @@ package main
 import (
 	"net"
 	"time"
-	"log"
 	"errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -18,19 +17,25 @@ type RpcFeatureServer struct {
 func (self *RpcFeatureServer) Status(ctx context.Context, in *pb.StatusRequest) (*pb.StatusReply, error) {
 	var role int32
 	if IsPrimary() {
-		role = 1
-	} else {
-		role = 2
+		role = ROLE_PRIMARY
+	} else if IsSecondary() {
+		role = ROLE_SECONDARY
 	}
-	return &pb.StatusReply{Id: int32(config.Replica.Id), Status: int32(FaissdbStatus), Role: role}, nil
+
+	var id int32
+	id = -1
+	if faissdb.selfMember != nil {
+		id = int32(faissdb.selfMember.Id)
+	}
+	return &pb.StatusReply{Id: id, Status: int32(faissdb.status), Role: role}, nil
 }
 
 func (self *RpcFeatureServer) Set(ctx context.Context, in *pb.SetRequest) (*pb.SetReply, error) {
 	nStored := 0
 	nError := 0
 	if IsPrimary() {
-		if FaissdbStatus != STATUS_READY {
-			return nil, errors.New("Not ready")
+		if faissdb.status != STATUS_READY {
+			return nil, errors.New("RpcFeatureServer.Set() Not ready")
 		}
 		var err error
 		for _, data := range in.GetData() {
@@ -42,15 +47,15 @@ func (self *RpcFeatureServer) Set(ctx context.Context, in *pb.SetRequest) (*pb.S
 			} else {
 				err := parseSparseV(v, data.GetSparsev())
 				if err != nil {
-					log.Println(err)
+					faissdb.logger.Error("RpcFeatureServer.Set() parseSparseV() %v", err)
 					nError++
 					continue
 				}
 			}
-			log.Println(" - set data", data.GetKey(), len(v))
+			faissdb.logger.Debug(" - set data %v %v", data.GetKey, len(v))
 			err = Set(data.GetKey(), v, data.GetCollections())
 			if err != nil {
-				log.Println(err)
+				faissdb.logger.Error("RpcFeatureServer.Set() Set() %v", err)
 				nError++
 			} else {
 				nStored++
@@ -62,11 +67,11 @@ func (self *RpcFeatureServer) Set(ctx context.Context, in *pb.SetRequest) (*pb.S
 
 func (self *RpcFeatureServer) Del(ctx context.Context, in *pb.DelRequest) (*pb.DelReply, error) {
 	if IsPrimary() {
-		if FaissdbStatus != STATUS_READY {
-			return nil, errors.New("Not ready")
+		if faissdb.status != STATUS_READY {
+			return nil, errors.New("RpcFeatureServer.Del() Not ready")
 		}
 		for _, key := range in.GetKey() {
-			log.Println(" - del key", key)
+			faissdb.logger.Debug(" - del data %v", key)
 			Del(key)
 		}
 	}
@@ -77,10 +82,10 @@ func (self *RpcFeatureServer) Del(ctx context.Context, in *pb.DelRequest) (*pb.D
 func (self *RpcFeatureServer) Train(ctx context.Context, in *pb.TrainRequest) (*pb.TrainReply, error) {
 	var err error
 	if IsPrimary() {
-		if FaissdbStatus != STATUS_READY {
-			return nil, errors.New("Not ready")
+		if faissdb.status != STATUS_READY {
+			return nil, errors.New("RpcFeatureServer.Train() Not ready")
 		}
-		log.Println(" - train")
+		faissdb.logger.Debug(" - train")
 		err = Train(float32(in.GetProportion()), in.GetForce())
 	}
 	return &pb.TrainReply{}, err
@@ -99,7 +104,7 @@ func (self *RpcFeatureServer) Search(ctx context.Context, in *pb.SearchRequest) 
 			return nil, err
 		}
 	}
-	log.Println(" - search", collection, v, in.GetN())
+	faissdb.logger.Debug(" - search %v %v", collection, v, in.GetN())
 	searchResults := Search(collection, v, int64(in.GetN()))
 	keys := make([]string, len(searchResults))
 	distances := make([]float64, len(searchResults))
@@ -113,7 +118,7 @@ func (self *RpcFeatureServer) Search(ctx context.Context, in *pb.SearchRequest) 
 func InitRpcFeatureServer() {
 	listen, err := net.Listen("tcp", config.Feature.Listen)
 	if err != nil {
-    log.Fatalf("InitRpcFeatureServer() %v", err)
+		faissdb.logger.Fatal("InitRpcFeatureServer() net.Listen() %v", err)
 	}
 	server := grpc.NewServer(
 		grpc.MaxSendMsgSize(100*1024*1024),
@@ -124,6 +129,6 @@ func InitRpcFeatureServer() {
 		}))
 	pb.RegisterFeatureServer(server, &RpcFeatureServer{})
 	if err := server.Serve(listen); err != nil {
-    log.Fatalf("InitRpcFeatureServer() %v", err)
+		faissdb.logger.Fatal("InitRpcFeatureServer() pb.RegisterFeatureServer() %v", err)
 	}
 }
