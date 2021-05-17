@@ -32,7 +32,7 @@ func SetRaw(key string, faissdbRecord *pb.FaissdbRecord) []byte {
 }
 
 func Set(key string, v []float32, collections []string) error {
-	faissdbRecord := pb.FaissdbRecord{V: v, Collections: collections}
+	faissdbRecord := pb.FaissdbRecord{V: v, Collections: Uniq(collections)}
 	if(len(faissdbRecord.V) != config.Db.Faiss.Dimension) {
 		return errors.New(fmt.Sprintf("Set() Invalid dimensions expected: %d actual: %d", config.Db.Faiss.Dimension, len(faissdbRecord.V)))
 	}

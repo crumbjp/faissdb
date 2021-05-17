@@ -125,6 +125,18 @@ func Contains(s []int, e int) bool {
 	return false
 }
 
+func Uniq(arr []string) []string {
+	bufMap := make(map[string]struct{})
+	for _, e := range arr {
+    bufMap[e] = struct{}{}
+	}
+	result := []string{}
+	for e := range bufMap {
+    result = append(result, e)
+	}
+	return result
+}
+
 func Sha1(in []byte) string {
 	sha1Hash := sha1.New()
 	sha1Hash.Write(in)

@@ -52,7 +52,7 @@ func (self *RpcFeatureServer) Set(ctx context.Context, in *pb.SetRequest) (*pb.S
 					continue
 				}
 			}
-			faissdb.logger.Debug(" - set data %v %v", data.GetKey, len(v))
+			faissdb.logger.Debug(" - set data %v %v", data.GetKey(), len(v))
 			err = Set(data.GetKey(), v, data.GetCollections())
 			if err != nil {
 				faissdb.logger.Error("RpcFeatureServer.Set() Set() %v", err)
