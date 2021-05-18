@@ -157,3 +157,19 @@ func FullLocalSync() error {
 	}
 	return nil
 }
+
+func DropallRaw() {
+	localIndex.ResetToTrained()
+	faissdb.idDB.DestroyDb()
+	faissdb.idDB.Open(&config.Db.Iddb)
+	faissdb.dataDB.DestroyDb()
+	faissdb.dataDB.Open(&config.Db.Iddb)
+}
+
+func Dropall() error {
+	faissdb.logger.Info("Dropall()")
+	defer faissdb.logger.Info("Dropall() end")
+	DropallRaw()
+	PutOplog(OP_DROPALL, "", nil)
+	return nil
+}
