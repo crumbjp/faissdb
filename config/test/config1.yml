@@ -1,4 +1,6 @@
 process:
+  loglv: trace
+  performancelog: true
   logfile: /tmp/faissdb1/log/faissdb.log
   pidfile: /tmp/faissdb1/tmp/faissdb.pid
   daemon: false

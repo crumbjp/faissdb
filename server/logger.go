@@ -104,5 +104,19 @@ func InitLogger(logfile string) {
 	} else {
 		log.SetOutput(io.MultiWriter(file, os.Stdout))
 	}
-	faissdb.logger = &Logger{loglv: LOGLV_INFO, performByKey: map[string]*PerformContext{}, enablePerform: false}
+	loglv := LOGLV_INFO
+	if config.Process.Loglv == "debug" {
+		loglv = LOGLV_DEBUG
+	} else if config.Process.Loglv == "trace" {
+		loglv = LOGLV_TRACE
+	} else if config.Process.Loglv == "info" {
+		loglv = LOGLV_INFO
+	} else if config.Process.Loglv == "warn" {
+		loglv = LOGLV_WARN
+	} else if config.Process.Loglv == "error" {
+		loglv = LOGLV_ERROR
+	} else if config.Process.Loglv == "fatal" {
+		loglv = LOGLV_FATAL
+	}
+	faissdb.logger = &Logger{loglv: loglv, performByKey: map[string]*PerformContext{}, enablePerform: config.Process.Performancelog}
 }
