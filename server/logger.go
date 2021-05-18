@@ -104,5 +104,5 @@ func InitLogger(logfile string) {
 	} else {
 		log.SetOutput(io.MultiWriter(file, os.Stdout))
 	}
-	faissdb.logger = &Logger{loglv: LOGLV_DEBUG, performByKey: map[string]*PerformContext{}, enablePerform: false}
+	faissdb.logger = &Logger{loglv: LOGLV_INFO, performByKey: map[string]*PerformContext{}, enablePerform: false}
 }
