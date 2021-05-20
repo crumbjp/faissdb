@@ -25,6 +25,8 @@ type Replicaonfig struct {
 
 type Config struct {
 	Process struct {
+		Performancelog bool
+		Loglv string
 		Logfile string
 		Pidfile string
 		Daemon bool

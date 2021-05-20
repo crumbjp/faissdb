@@ -32,7 +32,7 @@ func SetRaw(key string, faissdbRecord *pb.FaissdbRecord) []byte {
 }
 
 func Set(key string, v []float32, collections []string) error {
-	faissdbRecord := pb.FaissdbRecord{V: v, Collections: collections}
+	faissdbRecord := pb.FaissdbRecord{V: v, Collections: Uniq(collections)}
 	if(len(faissdbRecord.V) != config.Db.Faiss.Dimension) {
 		return errors.New(fmt.Sprintf("Set() Invalid dimensions expected: %d actual: %d", config.Db.Faiss.Dimension, len(faissdbRecord.V)))
 	}
@@ -155,5 +155,21 @@ func FullLocalSync() error {
 	if err := setStatus(STATUS_READY); err != nil {
 		return err
 	}
+	return nil
+}
+
+func DropallRaw() {
+	localIndex.ResetToTrained()
+	faissdb.idDB.DestroyDb()
+	faissdb.idDB.Open(&config.Db.Iddb)
+	faissdb.dataDB.DestroyDb()
+	faissdb.dataDB.Open(&config.Db.Iddb)
+}
+
+func Dropall() error {
+	faissdb.logger.Info("Dropall()")
+	defer faissdb.logger.Info("Dropall() end")
+	DropallRaw()
+	PutOplog(OP_DROPALL, "", nil)
 	return nil
 }

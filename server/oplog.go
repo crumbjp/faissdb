@@ -19,6 +19,7 @@ const (
 	OP_SYSTEM = int8(0)
 	OP_SET = int8(1)
 	OP_DEL = int8(2)
+	OP_DROPALL = int8(3)
 )
 
 func (self *Oplog) Encode() ([]byte, error) {

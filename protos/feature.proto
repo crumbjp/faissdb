@@ -10,6 +10,7 @@ service Feature {
   rpc Del (DelRequest) returns (DelReply) {}
   rpc Search (SearchRequest) returns (SearchReply) {}
   rpc Train (TrainRequest) returns (TrainReply) {}
+  rpc Dropall (DropallRequest) returns (DropallReply) {}
 }
 
 message StatusRequest {
@@ -62,4 +63,10 @@ message TrainRequest {
 }
 
 message TrainReply {
+}
+
+message DropallRequest {
+}
+
+message DropallReply {
 }

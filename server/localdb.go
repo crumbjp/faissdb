@@ -45,10 +45,10 @@ func (self *LocalDB) Open(dbconfig *Dbconfig) {
 }
 
 func (self *LocalDB) DestroyDb() {
-	faissdb.logger.Info("LocalDB[%s].DestroyDb() start", self.name)
-	defer faissdb.logger.Info("LocalDB[%s].DestroyDb() end", self.name)
 	self.rwmutex.Lock()
 	defer self.rwmutex.Unlock()
+	faissdb.logger.Info("LocalDB[%s].DestroyDb() start", self.name)
+	defer faissdb.logger.Info("LocalDB[%s].DestroyDb() end", self.name)
 	self.defaultBlockBasedTableOptions.Destroy()
 	self.defaultReadOptions.Destroy()
 	self.defaultWriteOptions.Destroy()
@@ -63,10 +63,10 @@ func (self *LocalDB) DestroyDb() {
 }
 
 func (self *LocalDB) Close() {
-	faissdb.logger.Info("LocalDB[%s].Close() start", self.name)
-	defer faissdb.logger.Info("LocalDB[%s].Close() end", self.name)
 	self.rwmutex.Lock()
 	defer self.rwmutex.Unlock()
+	faissdb.logger.Info("LocalDB[%s].Close() start", self.name)
+	defer faissdb.logger.Info("LocalDB[%s].Close() end", self.name)
 	self.defaultBlockBasedTableOptions.Destroy()
 	self.defaultReadOptions.Destroy()
 	self.defaultWriteOptions.Destroy()
@@ -82,6 +82,9 @@ func (self *LocalDB) Close() {
 func (self *LocalDB) Delete(key string) {
 	self.rwmutex.Lock()
 	defer self.rwmutex.Unlock()
+	if self.db == nil {
+		return
+	}
 	err := self.db.Delete(self.defaultWriteOptions, []byte(key))
 	if err != nil {
 		panic(err)
@@ -91,6 +94,9 @@ func (self *LocalDB) Delete(key string) {
 func (self *LocalDB) Put(key string, value []byte) {
 	self.rwmutex.Lock()
 	defer self.rwmutex.Unlock()
+	if self.db == nil {
+		return
+	}
 	err := self.db.Put(self.defaultWriteOptions, []byte(key), value)
 	if err != nil {
 		panic(err)
@@ -110,6 +116,9 @@ func (self *LocalDB) PutInt64(key string, value int64) {
 func (self *LocalDB) Get(key string) *gorocksdb.Slice {
 	self.rwmutex.RLock()
 	defer self.rwmutex.RUnlock()
+	if self.db == nil {
+		return nil
+	}
 	value, err := self.db.Get(self.defaultReadOptions, []byte(key))
 	if err != nil {
 		panic(err)
@@ -136,6 +145,11 @@ func (self *LocalDB) GetInt64(key string) *int64 {
 }
 
 func (self *LocalDB) GetRawData(startKey string, length int) ([]string, [][]byte, string) {
+	self.rwmutex.RLock()
+	defer self.rwmutex.RUnlock()
+	if self.db == nil {
+		return nil, nil, ""
+	}
 	nextKey := ""
 	keys := make([]string, length)
 	values := make([][]byte, length)

@@ -94,7 +94,7 @@ func TestFaissIndex_OpenAlready(t *testing.T) {
 }
 
 func TestFaissIndex_CloseOpen(t *testing.T) {
-	faissIndex.Close()
+	faissIndex.CloseWithoutLock()
 	faissIndex.OpenNew()
 }
 
@@ -108,7 +108,7 @@ func TestFaissIndex_Train(t *testing.T) {
 
 func TestFaissIndex_Write(t *testing.T) {
 	faissIndex.WriteTrained()
-	faissIndex.Close()
+	faissIndex.CloseWithoutLock()
 	assert.NoError(t, faissIndex.Open(true))
 }
 
@@ -135,7 +135,7 @@ func TestLocalIndex_initLocalIndex(t *testing.T) {
 	mainIndex := newFaissIndex("main")
 	assert.NoError(t, mainIndex.Open(true))
 	mainIndex.Write()
-	mainIndex.Close()
+	mainIndex.CloseWithoutLock()
 	initLocalIndex()
 	assert.NoError(t, localIndex.OpenAllIndex())
 }

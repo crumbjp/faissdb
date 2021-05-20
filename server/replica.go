@@ -546,6 +546,8 @@ func ApplyOplog(oplog *Oplog) error {
 		performDelRaw := faissdb.logger.PerformStart("ApplyOplog DelRaw")
 		DelRaw(oplog.key, faissdbRecord)
 		faissdb.logger.PerformEnd("ApplyOplog DelRaw", performDelRaw)
+	} else if oplog.op == OP_DROPALL {
+		DropallRaw()
 	} else if oplog.op == OP_SYSTEM {
 	}
 	return nil

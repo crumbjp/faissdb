@@ -104,8 +104,8 @@ func (self *FaissIndex) _PostOpen() {
 	faissdb.logger.Info("FaissIndex[%s]._PostOpen() total: %v", self.name, self.index.Ntotal())
 }
 
-func (self *FaissIndex) Close() {
-	faissdb.logger.Info("FaissIndex[%s].Close()", self.name)
+func (self *FaissIndex) CloseWithoutLock() {
+	faissdb.logger.Info("FaissIndex[%s].CloseWithoutLock()", self.name)
 	if self.index != nil {
 		self.index.Delete()
 		self.index = nil
@@ -117,11 +117,11 @@ func (self *FaissIndex) Close() {
 }
 
 func (self *FaissIndex) flush(path string) {
+	self.rwmutex.Lock()
+	defer self.rwmutex.Unlock()
 	if self.index == nil {
 		return
 	}
-	self.rwmutex.Lock()
-	defer self.rwmutex.Unlock()
 	err := faiss.WriteIndex(self.index, path)
 	if err != nil {
 		panic(err)
@@ -141,6 +141,8 @@ func (self *FaissIndex) Write() {
 }
 
 func (self *FaissIndex) Reset() {
+	self.rwmutex.Lock()
+	defer self.rwmutex.Unlock()
 	faissdb.logger.Info("FaissIndex[%s].Reset() start", self.name)
 	if self.index != nil {
 		self.index.Reset()
@@ -149,9 +151,12 @@ func (self *FaissIndex) Reset() {
 }
 
 func (self *FaissIndex) Train(vector []float32) {
-	faissdb.logger.Info("FaissIndex[%s].Train() start", self.name)
 	self.rwmutex.Lock()
 	defer self.rwmutex.Unlock()
+	if self.index == nil {
+		return
+	}
+	faissdb.logger.Info("FaissIndex[%s].Train() start", self.name)
 	self.index.Reset()
 	err := self.index.Train(vector)
 	if err != nil {
@@ -161,11 +166,11 @@ func (self *FaissIndex) Train(vector []float32) {
 }
 
 func (self *FaissIndex) AddWithIDs(vectors []float32, xids []int64) error {
+	self.rwmutex.Lock()
+	defer self.rwmutex.Unlock()
 	if self.index == nil {
 		return nil
 	}
-	self.rwmutex.Lock()
-	defer self.rwmutex.Unlock()
 	err := self.index.AddWithIDs(vectors, xids)
 	if err != nil {
 		faissdb.logger.Error("FaissIndex[%s].AddWithIDs() AddWithIDs %v", self.name, err)
@@ -174,6 +179,8 @@ func (self *FaissIndex) AddWithIDs(vectors []float32, xids []int64) error {
 }
 
 func (self *FaissIndex) RemoveIDs(ids []int64) int {
+	self.rwmutex.Lock()
+	defer self.rwmutex.Unlock()
 	if self.index == nil {
 		return 0
 	}
@@ -183,8 +190,6 @@ func (self *FaissIndex) RemoveIDs(ids []int64) int {
 	}
 	defer selector.Delete()
 	var n int
-	self.rwmutex.Lock()
-	defer self.rwmutex.Unlock()
 	n, err = self.index.RemoveIDs(selector)
 	if err != nil {
 		panic(err)
@@ -193,6 +198,8 @@ func (self *FaissIndex) RemoveIDs(ids []int64) int {
 }
 
 func (self *FaissIndex) Search(vector []float32, n int64) ([]float32, []int64) {
+	self.rwmutex.RLock()
+	defer self.rwmutex.RUnlock()
 	if self.index == nil {
 		return []float32{}, []int64{}
 	}
@@ -201,6 +208,8 @@ func (self *FaissIndex) Search(vector []float32, n int64) ([]float32, []int64) {
 }
 
 func (self *FaissIndex) Ntotal() int64 {
+	self.rwmutex.RLock()
+	defer self.rwmutex.RUnlock()
 	if self.index == nil {
 		return 0
 	}
@@ -250,10 +259,14 @@ func (self *LocalIndex) OpenAllIndex() error {
 }
 
 func (self *LocalIndex) CloseAll() {
-	self.mainIndex.Close()
+	self.mainIndex.rwmutex.Lock()
+	self.mainIndex.CloseWithoutLock()
+	self.mainIndex.rwmutex.Unlock()
 	self.mainIndex = nil
 	for _, index := range self.indexes {
-		index.Close()
+		index.rwmutex.Lock()
+		index.CloseWithoutLock()
+		index.rwmutex.Unlock()
 	}
 	self.indexes = map[string]*FaissIndex{}
 }
@@ -309,14 +322,18 @@ func (self *LocalIndex) ResetToTrained() {
 	if err != nil {
 		faissdb.logger.Error("LocalIndex.ResetToTrained() ReadFile(TrainedFilePath()) %v", err)
 	}
- 	self.mainIndex.Close()
+	self.mainIndex.rwmutex.Lock()
+	self.mainIndex.CloseWithoutLock()
+	defer self.mainIndex.rwmutex.Unlock()
 	err = WriteFile(self.mainIndex.IndexFilePath(), data)
 	if err != nil {
 		faissdb.logger.Fatal("LocalIndex.ResetToTrained() WriteFile() %v", err)
 	}
 	self.mainIndex.Open(false)
 	for collection, index := range self.indexes {
-		index.Close()
+		index.rwmutex.Lock()
+		index.CloseWithoutLock()
+		index.rwmutex.Unlock()
 		faissdb.logger.Info("LocalIndex.ResetToTrained() Reset index %v", collection)
 		err = WriteFile(index.IndexFilePath(), data)
 		if err != nil {

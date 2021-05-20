@@ -52,7 +52,7 @@ func (self *RpcFeatureServer) Set(ctx context.Context, in *pb.SetRequest) (*pb.S
 					continue
 				}
 			}
-			faissdb.logger.Debug(" - set data %v %v", data.GetKey, len(v))
+			faissdb.logger.Debug(" - set data %v %v", data.GetKey(), len(v))
 			err = Set(data.GetKey(), v, data.GetCollections())
 			if err != nil {
 				faissdb.logger.Error("RpcFeatureServer.Set() Set() %v", err)
@@ -77,7 +77,6 @@ func (self *RpcFeatureServer) Del(ctx context.Context, in *pb.DelRequest) (*pb.D
 	}
 	return &pb.DelReply{}, nil
 }
-
 
 func (self *RpcFeatureServer) Train(ctx context.Context, in *pb.TrainRequest) (*pb.TrainReply, error) {
 	var err error
@@ -114,6 +113,20 @@ func (self *RpcFeatureServer) Search(ctx context.Context, in *pb.SearchRequest) 
 	}
 	return &pb.SearchReply{Distances: distances, Keys: keys}, nil
 }
+
+func (self *RpcFeatureServer) Dropall(ctx context.Context, in *pb.DropallRequest) (*pb.DropallReply, error) {
+	var err error
+	if IsPrimary() {
+		if faissdb.status != STATUS_READY {
+			return nil, errors.New("RpcFeatureServer.Dropall() Not ready")
+		}
+		faissdb.logger.Debug(" - dropall")
+		err = Dropall()
+	}
+	return &pb.DropallReply{}, err
+}
+
+
 
 func InitRpcFeatureServer() {
 	listen, err := net.Listen("tcp", config.Feature.Listen)

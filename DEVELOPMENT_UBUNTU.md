@@ -34,14 +34,14 @@ make
 make install
 ```
 
-### rockdb
+### rocksdb
 ```
 apt install libsnappy-dev liblz4-dev libzstd-dev
 git clone https://github.com/facebook/rocksdb.git
 cd rocksdb
 git checkout -b v6.15.5 refs/tags/v6.15.5
-make release
-make release install
+make static_lib
+make install
 
 ```
 
@@ -50,7 +50,7 @@ make release install
 apt install libopenblas-base libopenblas-dev
 git clone https://github.com/facebookresearch/faiss.git
 cd faiss
-git checkout -b 4f12d9c20ca34f7c880b30fa51db9d32cbb47f87 4f12d9c20ca34f7c880b30fa51db9d32cbb47f87
+git checkout -b 267edb120b5d2b8d6abb884c30dfb94ec1a7331f 267edb120b5d2b8d6abb884c30dfb94ec1a7331f
 cmake -B build -DFAISS_ENABLE_GPU=OFF -DFAISS_ENABLE_PYTHON=OFF -DFAISS_ENABLE_C_API=ON -DBUILD_SHARED_LIBS=ON .
 make -C build
 make -C build install
@@ -89,6 +89,6 @@ make
 
 ### edit `go env GOPATH`/pkg/mod/github.com/tecbot/gorocksdb@[???]/dynflag.go
 from: // #cgo LDFLAGS: -lrocksdb -lstdc++ -lm -ldl
-to: // #cgo LDFLAGS: -L/usr/local/lib -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4 -lzstd
+to: // #cgo LDFLAGS: -L/usr/local/lib -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4 -lzstd -ldl
 
 make

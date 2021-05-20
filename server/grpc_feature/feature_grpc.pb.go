@@ -23,6 +23,7 @@ type FeatureClient interface {
 	Del(ctx context.Context, in *DelRequest, opts ...grpc.CallOption) (*DelReply, error)
 	Search(ctx context.Context, in *SearchRequest, opts ...grpc.CallOption) (*SearchReply, error)
 	Train(ctx context.Context, in *TrainRequest, opts ...grpc.CallOption) (*TrainReply, error)
+	Dropall(ctx context.Context, in *DropallRequest, opts ...grpc.CallOption) (*DropallReply, error)
 }
 
 type featureClient struct {
@@ -78,6 +79,15 @@ func (c *featureClient) Train(ctx context.Context, in *TrainRequest, opts ...grp
 	return out, nil
 }
 
+func (c *featureClient) Dropall(ctx context.Context, in *DropallRequest, opts ...grpc.CallOption) (*DropallReply, error) {
+	out := new(DropallReply)
+	err := c.cc.Invoke(ctx, "/feature.Feature/Dropall", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FeatureServer is the server API for Feature service.
 // All implementations must embed UnimplementedFeatureServer
 // for forward compatibility
@@ -87,6 +97,7 @@ type FeatureServer interface {
 	Del(context.Context, *DelRequest) (*DelReply, error)
 	Search(context.Context, *SearchRequest) (*SearchReply, error)
 	Train(context.Context, *TrainRequest) (*TrainReply, error)
+	Dropall(context.Context, *DropallRequest) (*DropallReply, error)
 	mustEmbedUnimplementedFeatureServer()
 }
 
@@ -108,6 +119,9 @@ func (UnimplementedFeatureServer) Search(context.Context, *SearchRequest) (*Sear
 }
 func (UnimplementedFeatureServer) Train(context.Context, *TrainRequest) (*TrainReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Train not implemented")
+}
+func (UnimplementedFeatureServer) Dropall(context.Context, *DropallRequest) (*DropallReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Dropall not implemented")
 }
 func (UnimplementedFeatureServer) mustEmbedUnimplementedFeatureServer() {}
 
@@ -212,6 +226,24 @@ func _Feature_Train_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Feature_Dropall_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DropallRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FeatureServer).Dropall(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/feature.Feature/Dropall",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FeatureServer).Dropall(ctx, req.(*DropallRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Feature_ServiceDesc is the grpc.ServiceDesc for Feature service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -238,6 +270,10 @@ var Feature_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Train",
 			Handler:    _Feature_Train_Handler,
+		},
+		{
+			MethodName: "Dropall",
+			Handler:    _Feature_Dropall_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
