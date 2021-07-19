@@ -12,9 +12,10 @@ mkdir -p /tmp/faissdb3/log
 mkdir -p /tmp/faissdb3/tmp
 mkdir -p /tmp/faissdb3/data
 
+echo $HOME
 if [ "${UID}" = "0" ]; then
     if [ "${HOME}" != "/root" ]; then
-        ln -s /root/go ~/
+        export GOPATH=~/go
     fi
 fi
 
