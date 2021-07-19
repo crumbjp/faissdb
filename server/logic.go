@@ -21,13 +21,21 @@ func setId(key string, faissdbRecord *pb.FaissdbRecord) {
 func SetRaw(key string, faissdbRecord *pb.FaissdbRecord) []byte {
 	faissdb.rwmutex.Lock()
 	defer faissdb.rwmutex.Unlock()
+	performEncodeFaissdbRecord := faissdb.logger.PerformStart("SetRaw EncodeFaissdbRecord")
 	encoded, err := EncodeFaissdbRecord(faissdbRecord)
+	faissdb.logger.PerformEnd("SetRaw EncodeFaissdbRecord", performEncodeFaissdbRecord)
 	if err != nil {
 		panic(err)
 	}
+	performDataDB := faissdb.logger.PerformStart("SetRaw dataDB")
 	faissdb.dataDB.Put(key, encoded)
+	faissdb.logger.PerformEnd("SetRaw dataDB", performDataDB)
+	performIdDB := faissdb.logger.PerformStart("SetRaw idDB")
 	faissdb.idDB.PutString(strconv.FormatInt(faissdbRecord.Id, 10), key)
+	faissdb.logger.PerformEnd("SetRaw idDB", performIdDB)
+	performLocalIndex := faissdb.logger.PerformStart("SetRaw localIndex")
 	localIndex.Add(faissdbRecord)
+	faissdb.logger.PerformEnd("SetRaw localIndex", performLocalIndex)
 	return encoded
 }
 
