@@ -15,7 +15,10 @@ mkdir -p /tmp/faissdb3/data
 echo $HOME
 if [ "${UID}" = "0" ]; then
     if [ "${HOME}" != "/root" ]; then
-        export GOPATH=/root/go/1.15.9
+        export GOENV_ROOT=/usr/local/goenv
+        export PATH=$GOENV_ROOT/bin:$PATH
+        eval "$(goenv init -)"
+        export PATH=$PATH:$GOPATH/bin
     fi
 fi
 
