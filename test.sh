@@ -12,6 +12,12 @@ mkdir -p /tmp/faissdb3/log
 mkdir -p /tmp/faissdb3/tmp
 mkdir -p /tmp/faissdb3/data
 
+if [ "${UID}" = "0" ]; then
+    if [ "${HOME}" != "/root" ]; then
+        ln -s /root/go ~/
+    fi
+fi
+
 pushd `dirname $0`/server
 go test -v
 popd
