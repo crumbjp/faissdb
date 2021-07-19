@@ -15,7 +15,7 @@ mkdir -p /tmp/faissdb3/data
 echo $HOME
 if [ "${UID}" = "0" ]; then
     if [ "${HOME}" != "/root" ]; then
-        export GOPATH=~/go
+        export GOPATH=/root/go
     fi
 fi
 
