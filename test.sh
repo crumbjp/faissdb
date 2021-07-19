@@ -12,7 +12,6 @@ mkdir -p /tmp/faissdb3/log
 mkdir -p /tmp/faissdb3/tmp
 mkdir -p /tmp/faissdb3/data
 
-echo $HOME
 if [ "${UID}" = "0" ]; then
     if [ "${HOME}" != "/root" ]; then
         ln -s /root/go ~/
@@ -23,9 +22,8 @@ if [ "${UID}" = "0" ]; then
     fi
 fi
 
-echo $GOPATH
-ls -la  $GOPATH
-
+git submodule init
+git submodule update
 pushd `dirname $0`/server
 go test -v
 popd
