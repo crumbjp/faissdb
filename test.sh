@@ -18,6 +18,9 @@ if [ "${UID}" = "0" ]; then
     fi
 fi
 
+echo $GOPATH
+ls -la  $GOPATH
+
 pushd `dirname $0`/server
 go test -v
 popd
