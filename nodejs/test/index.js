@@ -460,6 +460,30 @@ describe('index', ()=> {
       });
     });
 
+    it('Start new node', () => {
+      return new Promise(async (resolve, reject) => {
+        try {
+          cmd(`${FAISSDB} ${FAISSDB_CONFPATH}/config3.yml`);
+          while(true) {
+            await this.faissdbClient._prepare();
+            if(this.faissdbClient.secondaries.length == 2) {
+              break;
+            }
+            await sleep(500);
+          }
+          while(true) {
+            let secondaryDbStats = await this.faissdbClient.secondaries[1].dbstats();
+            if(_.find(secondaryDbStats.dbs, db => db.collection == 'main').ntotal == 167) {
+              break;
+            }
+          }
+          resolve();
+        } catch(e) {
+          reject(e);
+        }
+      });
+    });
+
     it('Dropall', () => {
       return new Promise(async (resolve, reject) => {
         try {

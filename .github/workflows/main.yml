@@ -15,9 +15,9 @@ jobs:
       max-parallel: 20
       matrix:
         test_script:
-          - test.sh
+          - test
     container:
-      image: crumbjp/faissdb@sha256:206323dfcd3f6994e7bed47186ef54f5a6b162ccab5285b27f0242ce7af751e2
+      image: crumbjp/faissdb@sha256:74b5a0fcf0e59ee1d2e2e5830a715266cf801ab26aaf1add7a575e4921e0a308
     steps:
       - uses: actions/checkout@v2
 
