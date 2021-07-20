@@ -5,6 +5,7 @@ rm -rf /tmp/faissdb1/data/*
 rm -rf /tmp/faissdb2/data/*
 rm -rf /tmp/faissdb3/data/*
 
+. ~/.faissdb
 pushd `dirname $0`/../nodejs
 bash mocha.sh
 popd
