@@ -117,11 +117,13 @@ func GetCurrentOplog(startLogkey string, length int) ([]string, [][]byte, error)
 		defer value.Free()
 		strLogkey := string(key.Data())
 		if first {
-			if startLogkey != "" && startLogkey != strLogkey {
-				return nil, nil, errors.New(fmt.Sprintf("GetCurrentOplog() Stale oplog expected: %s  actual: %s", startLogkey, strLogkey))
-			}
 			first = false
-			continue
+			if startLogkey != "" {
+				if startLogkey != strLogkey {
+					return nil, nil, errors.New(fmt.Sprintf("GetCurrentOplog() Stale oplog expected: %s  actual: %s", startLogkey, strLogkey))
+				}
+				continue
+			}
 		}
 		logkeys[count] = strLogkey
 		data := value.Data()

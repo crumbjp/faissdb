@@ -11,6 +11,7 @@ service Feature {
   rpc Search (SearchRequest) returns (SearchReply) {}
   rpc Train (TrainRequest) returns (TrainReply) {}
   rpc Dropall (DropallRequest) returns (DropallReply) {}
+  rpc DbStats (DbStatsRequest) returns (DbStatsReply) {}
 }
 
 message StatusRequest {
@@ -69,4 +70,29 @@ message DropallRequest {
 }
 
 message DropallReply {
+}
+
+message DbStatsRequest {
+}
+
+message DbData {
+  string collection = 1;
+  int32 ntotal = 2;
+}
+
+message FaissConfig {
+  string description = 1;
+	string metric = 2;
+	int32 nprobe = 3;
+	int32 dimension = 4;
+	int32 syncinterval = 5;
+}
+
+message DbStatsReply {
+  bool istrained = 1;
+  FaissConfig faissconfig = 2;
+  string lastsynced = 3;
+  string lastkey = 4;
+  int32 status = 5;
+  repeated DbData dbs = 6;
 }

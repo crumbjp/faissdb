@@ -1,0 +1,5 @@
+{
+  "require": ["test/global"],
+  "reporter": "spec",
+  "timeout": 60000
+}

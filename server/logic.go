@@ -36,6 +36,7 @@ func SetRaw(key string, faissdbRecord *pb.FaissdbRecord) []byte {
 	performLocalIndex := faissdb.logger.PerformStart("SetRaw localIndex")
 	localIndex.Add(faissdbRecord)
 	faissdb.logger.PerformEnd("SetRaw localIndex", performLocalIndex)
+faissdb.logger.Info("!!!! %v", localIndex.Ntotal(""))
 	return encoded
 }
 
@@ -180,4 +181,31 @@ func Dropall() error {
 	DropallRaw()
 	PutOplog(OP_DROPALL, "", nil)
 	return nil
+}
+
+type DbStatsResult struct {
+	Status int
+	Istrained bool
+	Lastsynced string
+	Lastkey string
+	Faiss Faissconfig
+	Ntotal map[string]int64
+}
+
+func DbStats() DbStatsResult {
+	faissdb.logger.Info("DbStats()")
+	defer faissdb.logger.Info("DbStats() end")
+	dbStatsResult := DbStatsResult{
+		Istrained: localIndex.IsTrained(),
+		Faiss: config.Db.Faiss,
+		Lastsynced: 	faissdb.metaDB.GetString("lastkey"),
+		Lastkey: LastKey(),
+		Status: faissdb.status,
+		Ntotal: map[string]int64{},
+	}
+	dbStatsResult.Ntotal["main"] = localIndex.Ntotal("")
+	for collection, _ := range localIndex.indexes {
+		dbStatsResult.Ntotal[collection] = localIndex.Ntotal(collection)
+	}
+	return dbStatsResult
 }
