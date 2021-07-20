@@ -15,7 +15,7 @@ mkdir -p /tmp/faissdb3/data
 if [ "${UID}" = "0" ]; then
     if [ "${HOME}" != "/root" ]; then
         ln -s /root/go ~/
-        ln -s /root/.faissdbgo ~/
+        ln -s /root/.faissdb ~/
     fi
 fi
 
