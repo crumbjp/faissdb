@@ -21,5 +21,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: run ${{ matrix.test_script }}
-        run: bash ${{ matrix.test_script }}
+      - name: prepare
+        run: bash ci/prepare.sh
+
+      - name: test_faissdb
+        run: bash ci/test_faissdb.sh
+
+      - name: test_client
+        run: bash ci/test_client.sh
