@@ -17,7 +17,7 @@ jobs:
         test_script:
           - test.sh
     container:
-      image: crumbjp/faissdb@sha256:f5c4c455d56f488b9565bbfb7200b2241ccf87c7e249207fa5e7fba489523a76
+      image: crumbjp/faissdb@sha256:206323dfcd3f6994e7bed47186ef54f5a6b162ccab5285b27f0242ce7af751e2
     steps:
       - uses: actions/checkout@v2
 
