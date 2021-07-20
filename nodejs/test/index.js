@@ -448,7 +448,7 @@ describe('index', ()=> {
           let primaryDbStats = await this.faissdbClient.primary.dbstats();
           expect(_.sortBy(primaryDbStats.dbs, 'collection')).to.deep.equals(expectedDbs);
           while(true) {
-            let secondaryDbStats = await this.faissdbClient.secondaries[0].dbstats();
+            let secondaryDbStats = await this.faissdbClient.secondaries[1].dbstats();
             if(_.find(secondaryDbStats.dbs, db => db.collection == 'main').ntotal == 167) {
               expect(_.sortBy(secondaryDbStats.dbs, 'collection')).to.deep.equals(expectedDbs);
               break;
@@ -487,8 +487,7 @@ describe('index', ()=> {
     it('Dropall', () => {
       return new Promise(async (resolve, reject) => {
         try {
-          let r = await this.faissdbClient.dropall();
-          console.log(r);
+          await this.faissdbClient.dropall();
           let expectedDbs = [{
             collection: 'i15', ntotal: 0
           }, {
