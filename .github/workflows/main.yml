@@ -1,0 +1,31 @@
+name: CI
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 20
+      matrix:
+        test_script:
+          - test
+    container:
+      image: crumbjp/faissdb@sha256:74b5a0fcf0e59ee1d2e2e5830a715266cf801ab26aaf1add7a575e4921e0a308
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: prepare
+        run: bash ci/prepare.sh
+
+      - name: test_faissdb
+        run: bash ci/test_faissdb.sh
+
+      - name: test_client
+        run: bash ci/test_client.sh

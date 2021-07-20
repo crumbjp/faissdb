@@ -580,6 +580,9 @@ func ReplicaSync() error {
 				return err
 			}
 			performPutOplog := faissdb.logger.PerformStart("ReplicaSync PutOplogWithKey")
+
+faissdb.logger.Info("********* %v %v %v", oplog.op, oplog.key, oplog.d)
+
 			PutOplogWithKey(reply.GetKeys()[i], oplog.op, oplog.key, oplog.d)
 			faissdb.logger.PerformEnd("ReplicaSync PutOplogWithKey", performPutOplog)
 		}

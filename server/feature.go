@@ -126,6 +126,16 @@ func (self *RpcFeatureServer) Dropall(ctx context.Context, in *pb.DropallRequest
 	return &pb.DropallReply{}, err
 }
 
+func (self *RpcFeatureServer) DbStats(ctx context.Context, in *pb.DbStatsRequest) (*pb.DbStatsReply, error) {
+	dbStatsResult := DbStats()
+	dbs := make([]*pb.DbData, len(dbStatsResult.Ntotal))
+	i := 0
+	for collection, ntotal := range dbStatsResult.Ntotal {
+		dbs[i] = &pb.DbData{Collection: collection, Ntotal: int32(ntotal)}
+		i++;
+	}
+	return &pb.DbStatsReply{Istrained: dbStatsResult.Istrained, Lastsynced: dbStatsResult.Lastsynced, Lastkey: dbStatsResult.Lastkey, Faissconfig: &pb.FaissConfig{Description: dbStatsResult.Faiss.Description, Metric: dbStatsResult.Faiss.Metric, Nprobe: int32(dbStatsResult.Faiss.Nprobe), Dimension: int32(dbStatsResult.Faiss.Dimension), Syncinterval: int32(dbStatsResult.Faiss.Syncinterval)}, Status: int32(dbStatsResult.Status), Dbs: dbs}, nil
+}
 
 
 func InitRpcFeatureServer() {

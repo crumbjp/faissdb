@@ -79,6 +79,7 @@ go get google.golang.org/protobuf/cmd/protoc-gen-go google.golang.org/grpc/cmd/p
 ```
 
 ### faissdb
+```
 apt install libbz2-dev zlib1g-dev
 git clone https://github.com/crumbjp/faissdb.git
 cd faissdb
@@ -92,3 +93,4 @@ from: // #cgo LDFLAGS: -lrocksdb -lstdc++ -lm -ldl
 to: // #cgo LDFLAGS: -L/usr/local/lib -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4 -lzstd -ldl
 
 make
+``
