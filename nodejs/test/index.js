@@ -406,6 +406,30 @@ describe('index', ()=> {
       });
     });
 
+    it('Start new node', () => {
+      return new Promise(async (resolve, reject) => {
+        try {
+          cmd(`${FAISSDB} ${FAISSDB_CONFPATH}/config3.yml`);
+          while(true) {
+            await this.faissdbClient._prepare();
+            if(this.faissdbClient.secondaries.length == 2) {
+              break;
+            }
+            await sleep(500);
+          }
+          while(true) {
+            let secondaryDbStats = await this.faissdbClient.secondaries[1].dbstats();
+            if(_.find(secondaryDbStats.dbs, db => db.collection == 'main').ntotal == 150) {
+              break;
+            }
+          }
+          resolve();
+        } catch(e) {
+          reject(e);
+        }
+      });
+    });
+
     it('Update', () => {
       return new Promise(async (resolve, reject) => {
         try {
@@ -438,44 +462,20 @@ describe('index', ()=> {
             return this.delKeys.indexOf(key) >= 0 || _.map(this.updates, r => r.key).indexOf(key) >= 0;
           };
           {
-            let [keys, distances] = await this.faissdbClient.search('', 10, normalize([30, 70]));
+            let [keys, distances] = await this.faissdbClient.secondaries[1].search('', 10, normalize([30, 70]));
             expect(_.zip(keys, distances)).to.deep.equals(_.reject(MAIN_RESULT, r => isMainInvalid(r[0])).slice(0,10));
           }
           {
-            let [keys, distances] = await this.faissdbClient.search('i3', 10, normalize([30, 70]));
+            let [keys, distances] = await this.faissdbClient.secondaries[1].search('i3', 10, normalize([30, 70]));
             expect(_.zip(keys, distances)).to.deep.equals(_.reject(I3_RESULT, r => isInvalid(r[0])).slice(0,10));
           }
           {
-            let [keys, distances] = await this.faissdbClient.search('i9', 10, normalize([30, 70]));
+            let [keys, distances] = await this.faissdbClient.secondaries[1].search('i9', 10, normalize([30, 70]));
             expect(_.zip(keys, distances)).to.deep.equals(I9_RESULT);
           }
           {
-            let [keys, distances] = await this.faissdbClient.search('i15', 10, normalize([30, 70]));
+            let [keys, distances] = await this.faissdbClient.secondaries[1].search('i15', 10, normalize([30, 70]));
             expect(_.zip(keys, distances)).to.deep.equals(_.reject(I15_RESULT, r => isInvalid(r[0])).slice(0,10));
-          }
-          resolve();
-        } catch(e) {
-          reject(e);
-        }
-      });
-    });
-
-    it('Start new node', () => {
-      return new Promise(async (resolve, reject) => {
-        try {
-          cmd(`${FAISSDB} ${FAISSDB_CONFPATH}/config3.yml`);
-          while(true) {
-            await this.faissdbClient._prepare();
-            if(this.faissdbClient.secondaries.length == 2) {
-              break;
-            }
-            await sleep(500);
-          }
-          while(true) {
-            let secondaryDbStats = await this.faissdbClient.secondaries[1].dbstats();
-            if(_.find(secondaryDbStats.dbs, db => db.collection == 'main').ntotal == 167) {
-              break;
-            }
           }
           resolve();
         } catch(e) {
