@@ -70,6 +70,7 @@ func deleteOpLogThread() {
 		if faissdb.status != STATUS_READY {
 			continue
 		}
+		count := 0
 		deleteMs := (time.Now().UnixNano() / 1000000) - (int64(config.Oplog.Term) * 1000)
 		lastKey :=	LastKey()
 		deleteLastKey := faissdb.oplogKeyGenerator.Str(faissdb.oplogKeyGenerator.Mix(deleteMs, 0))
@@ -88,8 +89,11 @@ func deleteOpLogThread() {
 			}
 			faissdb.oplogDB.Delete(oplogKey)
 			count++
+			if (count % 1000) == 0 {
+				faissdb.logger.Info("deleteOpLogThread() count=%v", count)
+			}
 		}
-		faissdb.logger.info("deleteOpLogThread() count=%v", count)
+		faissdb.logger.Info("deleteOpLogThread() count=%v", count)
 		if IsPrimary() {
 			PutOplog(OP_SYSTEM, "", []byte("deleteOpLogThread"))
 		}
