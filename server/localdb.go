@@ -156,7 +156,7 @@ func (self *LocalDB) GetRawData(startKey string, length int) ([]string, [][]byte
 	count := 0
 	it := self.db.NewIterator(self.defaultReadOptions)
 	it.Seek([]byte(startKey))
-	// defer it.Close()
+	defer it.Close()
 	for it = it; it.Valid(); it.Next() {
 		key := it.Key()
 		defer key.Free()
