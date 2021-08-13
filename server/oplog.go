@@ -79,8 +79,8 @@ func deleteOpLogThread() {
 		defer it.Close()
 		for it = it; it.Valid(); it.Next() {
 			key := it.Key()
-			defer key.Free()
 			oplogKey := string(key.Data())
+			key.Free()
 			if oplogKey == lastKey {
 				break // Keep at least 1 log
 			}

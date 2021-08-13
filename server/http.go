@@ -10,7 +10,7 @@ import (
 	"golang.org/x/net/netutil"
 	"net/http"
 	"encoding/json"
-	_ "net/http/pprof"
+	//	_ "net/http/pprof"
 )
 
 type StatusResult struct {
