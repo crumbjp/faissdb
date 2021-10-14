@@ -67,19 +67,19 @@ func (self *Oplog) Decode(b []byte) error {
 func deleteOpLogThread() {
 	for ;; {
 		time.Sleep(10000 * time.Millisecond)
-		if faissdb.status == STATUS_READY {
+		if faissdb.status != STATUS_READY {
 			continue
 		}
+		count := 0
 		deleteMs := (time.Now().UnixNano() / 1000000) - (int64(config.Oplog.Term) * 1000)
 		lastKey :=	LastKey()
 		deleteLastKey := faissdb.oplogKeyGenerator.Str(faissdb.oplogKeyGenerator.Mix(deleteMs, 0))
 		it := faissdb.oplogDB.db.NewIterator(faissdb.dataDB.defaultReadOptions)
 		it.Seek([]byte(""))
-		defer it.Close()
 		for it = it; it.Valid(); it.Next() {
 			key := it.Key()
-			defer key.Free()
 			oplogKey := string(key.Data())
+			key.Free()
 			if oplogKey == lastKey {
 				break // Keep at least 1 log
 			}
@@ -87,7 +87,13 @@ func deleteOpLogThread() {
 				break
 			}
 			faissdb.oplogDB.Delete(oplogKey)
+			count++
+			if (count % 1000) == 0 {
+				faissdb.logger.Info("deleteOpLogThread() count=%v", count)
+			}
 		}
+		it.Close()
+		faissdb.logger.Info("deleteOpLogThread() count=%v", count)
 		if IsPrimary() {
 			PutOplog(OP_SYSTEM, "", []byte("deleteOpLogThread"))
 		}

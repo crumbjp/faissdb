@@ -501,6 +501,7 @@ func ReplicaFullSync() {
 	masterLastKey, err = RpcReplicaGetLastKey()
 	faissdb.logger.Info("ReplicaFullSync() masterLastKey: %s", masterLastKey)
 	currentKey := ""
+	count := 0
 	for ;; {
 		reply, err := RpcReplicaGetData(currentKey, FULLSYNC_BULKSIZE)
 		if err != nil {
@@ -510,12 +511,13 @@ func ReplicaFullSync() {
 			faissdbRecord := &pb.FaissdbRecord{}
 			DecodeFaissdbRecord(faissdbRecord, value)
 			SetRaw(reply.GetKeys()[i], faissdbRecord)
+			count++
 		}
 		if reply.GetNextkey() == "" {
 			break
 		}
 		currentKey = reply.GetNextkey()
-		faissdb.logger.Info("ReplicaFullSync() next: %s", currentKey)
+		faissdb.logger.Info("ReplicaFullSync() next: %s count: %v", currentKey, count)
 	}
 	PutOplogWithKey(masterLastKey, OP_SYSTEM, "", []byte("FullSync"))
 	ReplicaSync()

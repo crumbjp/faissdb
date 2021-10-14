@@ -36,7 +36,6 @@ func SetRaw(key string, faissdbRecord *pb.FaissdbRecord) []byte {
 	performLocalIndex := faissdb.logger.PerformStart("SetRaw localIndex")
 	localIndex.Add(faissdbRecord)
 	faissdb.logger.PerformEnd("SetRaw localIndex", performLocalIndex)
-faissdb.logger.Info("!!!! %v", localIndex.Ntotal(""))
 	return encoded
 }
 
