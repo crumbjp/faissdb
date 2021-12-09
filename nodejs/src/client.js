@@ -15,6 +15,7 @@ const STATUS_READY = 100;
 
 class Client {
   constructor(options) {
+    this.options = options || {};
     this.host = options.connect.host;
     this.port = options.connect.port;
     this.currentStatus = {};
@@ -24,12 +25,15 @@ class Client {
     this.client = new FeatureClient(
       `${this.host}:${this.port}`,
       GrpcJs.credentials.createInsecure(),
-      {
-        "grpc.keepalive_time_ms": 3000,
-        "grpc.keepalive_timeout_ms": 1000,
-        "grpc.keepalive_permit_without_calls": 1,
-        "grpc.max_send_message_length": 100*1024*1024,
-      }
+      _.merge({
+        'grpc.keepalive_time_ms': 10000,
+        'grpc.keepalive_timeout_ms': 10000,
+        'grpc.keepalive_permit_without_calls': 1,
+        'grpc.http2_write_buffer_size': 1024 * 1024 * 1024,
+        'grpc.http2.max_ping_strikes': 0,
+        'grpc.max_send_message_length': -1,
+        'grpc.max_receive_message_length': -1,
+      }, (this.options.grpc || {}))
     );
   }
 
