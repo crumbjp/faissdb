@@ -48,7 +48,6 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 				Primary: IsPrimary(),
 				Secondary: IsSecondary(),
 			}
-			searchResult.Ntotal["main"] = localIndex.Ntotal("")
 			for collection, _ := range localIndex.indexes {
 				searchResult.Ntotal[collection] = localIndex.Ntotal(collection)
 			}

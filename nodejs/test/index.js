@@ -191,12 +191,12 @@ describe('index', ()=> {
         this.inputs = [];
         for(let i = 0; i < N; i++){
           let key = getKey(i);
-          let collections = [];
+          let collections = ['main'];
           if(i%3 == 0) {
-            collections = ['i3'];
+            collections = ['main', 'i3'];
           }
           if(i%15 == 0) {
-            collections = ['i15'];
+            collections = ['main', 'i15'];
           }
           if(i%2 == 0) {
             this.delKeys.push(key);
@@ -213,7 +213,7 @@ describe('index', ()=> {
             this.updates.push({
               key: getKey(i),
               v: normalize([i, N-i]),
-              collections: ['i9'],
+              collections: ['main', 'i9'],
             });
           }
         }
@@ -253,9 +253,7 @@ describe('index', ()=> {
               dimension: 2,
               syncinterval: 60000
             },
-            dbs: [{
-              collection: 'main', ntotal: 0
-            }]});
+            dbs: []});
           expect(this.faissdbClient.secondaries.length).to.equals(1);
           let secondaryStatus = await this.faissdbClient.secondaries[0].status();
           expect(secondaryStatus).to.deep.equals({
@@ -292,10 +290,10 @@ describe('index', ()=> {
     it('Train', () => {
       return new Promise(async (resolve, reject) => {
         try {
-          let [keys, distances] = await this.faissdbClient.primary.search('', 10, normalize([30, 70]));
-          expect(keys).to.deep.equals([]);
+          let [emptyKeys, emptyDistances] = await this.faissdbClient.primary.search('main', 10, normalize([30, 70]));
+          expect(emptyKeys).to.deep.equals([]);
           await this.faissdbClient.train(1);
-          [keys, distances] = await this.faissdbClient.primary.search('', 10, normalize([30, 70]));
+          let [keys, distances] = await this.faissdbClient.primary.search('main', 10, normalize([30, 70]));
           expect(_.zip(keys, distances)).to.deep.equals(MAIN_RESULT.slice(0, 10));
           let primaryDbStats = await this.faissdbClient.primary.dbstats();
           expect(_.sortBy(primaryDbStats.dbs, 'collection')).to.deep.equals([{
@@ -330,7 +328,7 @@ describe('index', ()=> {
           }, {
             collection: 'main', ntotal: 300
           }]);
-          let [keys, distances] = await this.faissdbClient.search('', 10, normalize([30, 70]));
+          let [keys, distances] = await this.faissdbClient.search('main', 10, normalize([30, 70]));
           expect(_.zip(keys, distances)).to.deep.equals(MAIN_RESULT.slice(0, 10));
           resolve();
         } catch(e) {
@@ -388,7 +386,7 @@ describe('index', ()=> {
             return this.delKeys.indexOf(key) >=0;
           };
           {
-            let [keys, distances] = await this.faissdbClient.search('', 10, normalize([30, 70]));
+            let [keys, distances] = await this.faissdbClient.search('main', 10, normalize([30, 70]));
             expect(_.zip(keys, distances)).to.deep.equals(_.reject(MAIN_RESULT, r => isInvalid(r[0])).slice(0,10));
           }
           {
@@ -462,7 +460,7 @@ describe('index', ()=> {
             return this.delKeys.indexOf(key) >= 0 || _.map(this.updates, r => r.key).indexOf(key) >= 0;
           };
           {
-            let [keys, distances] = await this.faissdbClient.secondaries[1].search('', 10, normalize([30, 70]));
+            let [keys, distances] = await this.faissdbClient.secondaries[1].search('main', 10, normalize([30, 70]));
             expect(_.zip(keys, distances)).to.deep.equals(_.reject(MAIN_RESULT, r => isMainInvalid(r[0])).slice(0,10));
           }
           {

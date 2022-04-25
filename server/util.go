@@ -11,6 +11,11 @@ import (
 	"crypto/sha1"
 )
 
+func StatFile(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
 func ReadFile(path string) ([]byte, error) {
 	file, err := os.Open(path)
 	if err != nil {

@@ -98,9 +98,7 @@ func (self *FaissIndex) _PostOpen() {
 	if err != nil {
 		panic(err)
 	}
-	if(self.name != "main") {
-		faissdb.metaDB.PutString(META_KEY_DB_PREFIX + self.name, self.name)
-	}
+	faissdb.metaDB.PutString(META_KEY_DB_PREFIX + self.name, self.name)
 	faissdb.logger.Info("FaissIndex[%s]._PostOpen() total: %v", self.name, self.index.Ntotal())
 }
 
@@ -219,7 +217,6 @@ func (self *FaissIndex) Ntotal() int64 {
 var localIndex *LocalIndex
 
 type LocalIndex struct {
-	mainIndex *FaissIndex
 	indexes map[string]*FaissIndex
 }
 
@@ -233,12 +230,6 @@ func initLocalIndex() {
 func (self *LocalIndex) OpenAllIndex() error {
 	faissdb.logger.Info("LocalIndex.OpenAllIndex() start")
 	defer faissdb.logger.Info("LocalIndex.OpenAllIndex() end")
-	self.mainIndex = newFaissIndex("main")
-	err := self.mainIndex.Open(false)
-	if err != nil {
-		faissdb.logger.Error("LocalIndex.OpenAllIndex() Open %v", err)
-		self.mainIndex.OpenNew()
-	}
 	it := faissdb.metaDB.db.NewIterator(faissdb.dataDB.defaultReadOptions)
 	it.Seek([]byte(META_KEY_DB_PREFIX))
 	defer it.Close()
@@ -259,10 +250,6 @@ func (self *LocalIndex) OpenAllIndex() error {
 }
 
 func (self *LocalIndex) CloseAll() {
-	self.mainIndex.rwmutex.Lock()
-	self.mainIndex.CloseWithoutLock()
-	self.mainIndex.rwmutex.Unlock()
-	self.mainIndex = nil
 	for _, index := range self.indexes {
 		index.rwmutex.Lock()
 		index.CloseWithoutLock()
@@ -271,35 +258,36 @@ func (self *LocalIndex) CloseAll() {
 	self.indexes = map[string]*FaissIndex{}
 }
 
-func (self *LocalIndex) IsTrained() (bool) {
-	return self.mainIndex.index.IsTrained()
-}
-
 func (self *LocalIndex) Ntotal(collection string) int64 {
-	if collection == "" {
-		return self.mainIndex.Ntotal()
-	}
 	if self.indexes[collection] != nil {
 		return self.indexes[collection].Ntotal()
 	}
 	return 0
 }
 
-func (self *LocalIndex) Add(faissdbRecord *pb.FaissdbRecord) error {
- 	err := self.mainIndex.AddWithIDs(faissdbRecord.V, []int64{faissdbRecord.Id})
+func (self *LocalIndex) Add(faissdbRecord *pb.FaissdbRecord) {
 	for _, collection := range faissdbRecord.Collections {
 		if self.indexes[collection] == nil {
 			self.indexes[collection] = newFaissIndex(collection)
 			self.indexes[collection].Open(true)
 		}
-		self.indexes[collection].AddWithIDs(faissdbRecord.V, []int64{faissdbRecord.Id})
+		err := self.indexes[collection].AddWithIDs(faissdbRecord.V, []int64{faissdbRecord.Id})
+		if err != nil {
+			panic(err)
+		}
 	}
-	return err
+}
+
+func (self *LocalIndex) RemoveRaw(collection string, ids []int64) int {
+	if self.indexes[collection] != nil {
+		self.indexes[collection].RemoveIDs(ids)
+	}
+	return 0
 }
 
 func (self *LocalIndex) Remove(faissdbRecord *pb.FaissdbRecord) int {
 	performMain := faissdb.logger.PerformStart("LocalIndex.Remove main")
-	n := self.mainIndex.RemoveIDs([]int64{faissdbRecord.Id})
+	n := self.RemoveRaw("", []int64{faissdbRecord.Id})
 	faissdb.logger.PerformEnd("LocalIndex.Remove main", performMain)
 	for _, collection := range faissdbRecord.Collections {
 		if self.indexes[collection] == nil {
@@ -309,10 +297,14 @@ func (self *LocalIndex) Remove(faissdbRecord *pb.FaissdbRecord) int {
 			faissdb.logger.PerformEnd("LocalIndex.Remove Open", performOpen)
 		}
 		performRemove := faissdb.logger.PerformStart("LocalIndex.Remove Remove")
-		self.indexes[collection].RemoveIDs([]int64{faissdbRecord.Id})
+		self.RemoveRaw(collection, []int64{faissdbRecord.Id})
 		faissdb.logger.PerformEnd("LocalIndex.Remove Remove", performRemove)
 	}
 	return n
+}
+
+func (self *LocalIndex) IsTrained() (bool) {
+	return StatFile(TrainedFilePath())
 }
 
 func (self *LocalIndex) ResetToTrained() {
@@ -322,14 +314,6 @@ func (self *LocalIndex) ResetToTrained() {
 	if err != nil {
 		faissdb.logger.Error("LocalIndex.ResetToTrained() ReadFile(TrainedFilePath()) %v", err)
 	}
-	self.mainIndex.rwmutex.Lock()
-	self.mainIndex.CloseWithoutLock()
-	defer self.mainIndex.rwmutex.Unlock()
-	err = WriteFile(self.mainIndex.IndexFilePath(), data)
-	if err != nil {
-		faissdb.logger.Fatal("LocalIndex.ResetToTrained() WriteFile() %v", err)
-	}
-	self.mainIndex.Open(false)
 	for collection, index := range self.indexes {
 		index.rwmutex.Lock()
 		index.CloseWithoutLock()
@@ -346,7 +330,6 @@ func (self *LocalIndex) ResetToTrained() {
 func (self *LocalIndex) Write() {
 	faissdb.logger.Info("LocalIndex.Write() start")
 	lastkey := LastKey()
- 	self.mainIndex.Write()
 	for _, index := range self.indexes {
 		index.Write()
 	}
@@ -354,9 +337,27 @@ func (self *LocalIndex) Write() {
 	faissdb.logger.Info("LocalIndex.Write() end %s", lastkey)
 }
 
-func (self *LocalIndex) SyncFromLocalDb(start string) {
+func (self *LocalIndex) SyncFromLocalDb() {
 	faissdb.logger.Info("LocalIndex.SyncFromLocalDb() start %s", start)
 	defer faissdb.logger.Info("LocalIndex.SyncFromLocalDb() end %s", start)
+	it := faissdb.dataDB.db.NewIterator(faissdb.dataDB.defaultReadOptions)
+	it.Seek([]byte(""))
+	defer it.Close()
+	for it = it; it.Valid(); it.Next() {
+		key := it.Key()
+		defer key.Free()
+		value := it.Value()
+		defer value.Free()
+		faissdbRecord := &pb.FaissdbRecord{}
+		DecodeFaissdbRecord(faissdbRecord, value.Data())
+		SetRaw(string(key.Data()), faissdbRecord)
+	}
+	self.Write()
+}
+
+func (self *LocalIndex) SyncLocalOplog(start string) {
+	faissdb.logger.Info("LocalIndex.SyncLocalOplog() start %s", start)
+	defer faissdb.logger.Info("LocalIndex.SyncLocalOplog() end %s", start)
 	bulkSize := 10000
 	oplog := &Oplog{}
 	for ;; {
@@ -380,20 +381,19 @@ func (self *LocalIndex) SyncFromLocalDb(start string) {
 
 func (self *LocalIndex) Train(trainData []float32) {
 	faissdb.logger.Info("LocalIndex.Train() len: %v", len(trainData))
-	self.mainIndex.Train(trainData)
-	self.mainIndex.WriteTrained()
+	trainIndex := newFaissIndex("_TRAIN_")
+	trainIndex.OpenNew()
+	trainIndex.Train(trainData)
+	trainIndex.WriteTrained()
+	trainIndex.CloseWithoutLock()
 }
 
 func (self *LocalIndex) Search(collection string, vector []float32, n int64) ([]float32, []int64) {
-	if collection == "" {
-		return self.mainIndex.Search(vector, n)
-	}
 	if self.indexes[collection] != nil {
 		return self.indexes[collection].Search(vector, n)
 	}
 	return nil, nil
 }
-
 
 func TrainedFilePath() string {
 	return config.Db.Dbpath + FAISS_TRAINED
@@ -422,6 +422,6 @@ func GapSyncLocalIndex() {
 	metaLastkey := faissdb.metaDB.GetString("lastkey")
 	if lastkey != "" && lastkey != metaLastkey {
 		faissdb.logger.Info("GapSyncLocalIndex() Detect gap index(%v) != localdb(%v)", metaLastkey, lastkey)
-		localIndex.SyncFromLocalDb(metaLastkey)
+		localIndex.SyncLocalOplog(metaLastkey)
 	}
 }
