@@ -287,7 +287,6 @@ func (self *LocalIndex) RemoveRaw(collection string, ids []int64) int {
 
 func (self *LocalIndex) Remove(faissdbRecord *pb.FaissdbRecord) int {
 	performMain := faissdb.logger.PerformStart("LocalIndex.Remove main")
-	n := self.RemoveRaw("", []int64{faissdbRecord.Id})
 	faissdb.logger.PerformEnd("LocalIndex.Remove main", performMain)
 	for _, collection := range faissdbRecord.Collections {
 		if self.indexes[collection] == nil {
@@ -300,7 +299,7 @@ func (self *LocalIndex) Remove(faissdbRecord *pb.FaissdbRecord) int {
 		self.RemoveRaw(collection, []int64{faissdbRecord.Id})
 		faissdb.logger.PerformEnd("LocalIndex.Remove Remove", performRemove)
 	}
-	return n
+	return 0
 }
 
 func (self *LocalIndex) IsTrained() (bool) {

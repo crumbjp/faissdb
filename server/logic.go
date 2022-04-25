@@ -19,7 +19,6 @@ func SetRaw(key string, faissdbRecord *pb.FaissdbRecord) []byte {
 	if(valueData != nil) {
 		currentFaissdbRecord := &pb.FaissdbRecord{}
 		DecodeFaissdbRecord(currentFaissdbRecord, valueData)
-		localIndex.RemoveRaw("", []int64{currentFaissdbRecord.Id})
 		for _, collection := range currentFaissdbRecord.Collections {
 			localIndex.RemoveRaw(collection, []int64{currentFaissdbRecord.Id})
 		}
