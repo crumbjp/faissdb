@@ -1,4 +1,4 @@
-const Client = require('index');
+const ReplicaSet = require('index').ReplicaSet;
 const _ = require('lodash');
 
 const normalize = (vector) => {
@@ -7,9 +7,11 @@ const normalize = (vector) => {
 };
 
 (async () => {
-  let client = new Client({
-    host: 'localhost',
-    port: 20021,
+  let client = new ReplicaSet({
+    connects: [{
+      host: 'localhost',
+      port: 20021,
+    }]
   });
   client.init();
   let datas = [];
@@ -17,16 +19,20 @@ const normalize = (vector) => {
     let v = normalize([i, 1000-i]);
     datas.push({
       key: `d${i}`,
-      v: v
+      v: v,
+      collection: ['main'],
     });
     datas.push({
       key: `s${i}`,
       v: {
         '0': v[0],
         '1': v[1],
-      }
+      },
+      collections: ['main'],
     });
   }
+  console.log('dropall');
+  await client.dropall();
   console.log('set');
   await client.set(datas);
   console.log('train');
@@ -35,12 +41,12 @@ const normalize = (vector) => {
   await client.del(['k1', 'k10', 'k20']);
   console.log('search');
   {
-    let [keys, distances] = await client.search(10, normalize([0.1, 0.9]));
+    let [keys, distances] = await client.search('main', 10, normalize([0.1, 0.9]));
     console.log(keys, distances);
   }
-  {
+    {
     let v = normalize([1, 1]);
-    let [keys, distances] = await client.search(10, {
+    let [keys, distances] = await client.search('main', 10, {
       '0': v[0],
       '1': v[1],
     });

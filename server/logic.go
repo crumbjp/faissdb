@@ -9,18 +9,24 @@ import (
 	pb "github.com/crumbjp/faissdb/server/grpc_replica"
 )
 
-func setId(key string, faissdbRecord *pb.FaissdbRecord) {
-	deletedRecord := Del(key)
-	if deletedRecord != nil {
-		faissdbRecord.Id = deletedRecord.Id
-	} else {
-		faissdbRecord.Id = faissdb.idGenerator.Generate()
-	}
-}
-
 func SetRaw(key string, faissdbRecord *pb.FaissdbRecord) []byte {
 	faissdb.rwmutex.Lock()
 	defer faissdb.rwmutex.Unlock()
+
+	value := faissdb.dataDB.Get(key)
+	defer value.Free()
+	valueData := value.Data()
+	if(valueData != nil) {
+		currentFaissdbRecord := &pb.FaissdbRecord{}
+		DecodeFaissdbRecord(currentFaissdbRecord, valueData)
+		for _, collection := range currentFaissdbRecord.Collections {
+			localIndex.RemoveRaw(collection, []int64{currentFaissdbRecord.Id})
+		}
+		faissdbRecord.Id = currentFaissdbRecord.Id
+	} else if faissdbRecord.Id == 0 {
+		faissdbRecord.Id = faissdb.idGenerator.Generate()
+	} else {
+	}
 	performEncodeFaissdbRecord := faissdb.logger.PerformStart("SetRaw EncodeFaissdbRecord")
 	encoded, err := EncodeFaissdbRecord(faissdbRecord)
 	faissdb.logger.PerformEnd("SetRaw EncodeFaissdbRecord", performEncodeFaissdbRecord)
@@ -44,7 +50,6 @@ func Set(key string, v []float32, collections []string) error {
 	if(len(faissdbRecord.V) != config.Db.Faiss.Dimension) {
 		return errors.New(fmt.Sprintf("Set() Invalid dimensions expected: %d actual: %d", config.Db.Faiss.Dimension, len(faissdbRecord.V)))
 	}
-	setId(key, &faissdbRecord)
 	encoded := SetRaw(key, &faissdbRecord)
 	PutOplog(OP_SET, key, encoded)
 	return nil
@@ -144,6 +149,7 @@ func Train(proportion float32, force bool) error {
 	faissdb.logger.Info("Train() Train start (%d)", len(trainData) / config.Db.Faiss.Dimension)
 	localIndex.Train(trainData)
 	if err := FullLocalSync(); err != nil {
+		faissdb.logger.Error("Train err", err)
 		return err
 	}
 	faissdb.logger.Info("Train end")
@@ -159,7 +165,7 @@ func FullLocalSync() error {
 	localIndex.ResetToTrained()
 	faissdb.idDB.DestroyDb()
 	faissdb.idDB.Open(&config.Db.Iddb)
-	localIndex.SyncFromLocalDb("")
+	localIndex.SyncFromLocalDb()
 	if err := setStatus(STATUS_READY); err != nil {
 		return err
 	}
@@ -202,7 +208,6 @@ func DbStats() DbStatsResult {
 		Status: faissdb.status,
 		Ntotal: map[string]int64{},
 	}
-	dbStatsResult.Ntotal["main"] = localIndex.Ntotal("")
 	for collection, _ := range localIndex.indexes {
 		dbStatsResult.Ntotal[collection] = localIndex.Ntotal(collection)
 	}

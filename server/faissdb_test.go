@@ -141,13 +141,13 @@ func TestLocalIndex_initLocalIndex(t *testing.T) {
 }
 
 func TestLogic_Set(t *testing.T) {
-	assert.Error(t, Set("ignore", []float32{0.1,0.1,0.1}, []string{"foo", "bar"}))
-	assert.NoError(t, Set("key1", []float32{0.1,0.1}, []string{"foo", "bar", "baz"}))
-	assert.NoError(t, Set("key2", []float32{0.1,0.2}, []string{"bar", "baz"}))
-	assert.NoError(t, Set("key3", []float32{0.2,0.2}, []string{"foo", "baz"}))
-	assert.NoError(t, Set("key4", []float32{0.2,0.3}, []string{"foo", "bar"}))
+	assert.Error(t, Set("ignore", []float32{0.1,0.1,0.1}, []string{"main", "foo", "bar"}))
+	assert.NoError(t, Set("key1", []float32{0.1,0.1}, []string{"main", "foo", "bar", "baz"}))
+	assert.NoError(t, Set("key2", []float32{0.1,0.2}, []string{"main", "bar", "baz"}))
+	assert.NoError(t, Set("key3", []float32{0.2,0.2}, []string{"main", "foo", "baz"}))
+	assert.NoError(t, Set("key4", []float32{0.2,0.3}, []string{"main", "foo", "bar"}))
 	localIndex.Write()
-	assert.Equal(t, int64(4), localIndex.Ntotal(""))
+	assert.Equal(t, int64(4), localIndex.Ntotal("main"))
 	assert.Equal(t, int64(3), localIndex.Ntotal("foo"))
 	assert.Equal(t, int64(3), localIndex.Ntotal("bar"))
 	assert.Equal(t, int64(3), localIndex.Ntotal("baz"))
@@ -155,7 +155,7 @@ func TestLogic_Set(t *testing.T) {
 
 func TestLogic_Search(t *testing.T) {
 	var searchResults []SearchResult
-	searchResults = Search("", []float32{1,2}, 2) // from main
+	searchResults = Search("main", []float32{1,2}, 2) // from main
 	assert.Equal(t, []string{"key4", "key3"}, []string{searchResults[0].key, searchResults[1].key})
 	searchResults = Search("foo", []float32{1,2}, 2)
 	assert.Equal(t, []string{"key4", "key3"}, []string{searchResults[0].key, searchResults[1].key})
@@ -167,7 +167,7 @@ func TestLogic_Search(t *testing.T) {
 
 func TestLogic_Del(t *testing.T) {
 	Del("key1")
-	assert.Equal(t, int64(3), localIndex.Ntotal(""))
+	assert.Equal(t, int64(3), localIndex.Ntotal("main"))
 	assert.Equal(t, int64(2), localIndex.Ntotal("foo"))
 	assert.Equal(t, int64(2), localIndex.Ntotal("bar"))
 	assert.Equal(t, int64(2), localIndex.Ntotal("baz"))
@@ -176,7 +176,7 @@ func TestLogic_Del(t *testing.T) {
 func TestLocalIndex_GapSyncLocalIndex(t *testing.T) {
 	localIndex.CloseAll()
 	assert.NoError(t, localIndex.OpenAllIndex())
-	assert.Equal(t, int64(4), localIndex.Ntotal(""))
+	assert.Equal(t, int64(4), localIndex.Ntotal("main"))
 	GapSyncLocalIndex()
-	assert.Equal(t, int64(3), localIndex.Ntotal(""))
+	assert.Equal(t, int64(3), localIndex.Ntotal("main"))
 }
