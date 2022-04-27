@@ -37,14 +37,4 @@ Almost same as Set.
 
 ## Client
 - Call gRPC directly. [feature.proto](/protos/feature.proto)
-- [nodejs](https://github.com/crumbjp/faissdb_client_node)
-
-
-## Plan
-|  version  |  feature  |
-| ---- | ---- |
-|  alpha  |  simple replication  |
-|  0.0.2  | Adding new Faiss index without restart |
-|  0.0.3  | Dynamic replica setting |
-|  N/A  | auto promotion from SECONDARY to PRIMARY if needed |
-|  N/A  | safety termination |
+- [nodejs](https://github.com/crumbjp/faissdb/tree/master/nodejs)

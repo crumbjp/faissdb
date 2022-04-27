@@ -189,7 +189,7 @@ describe('index', ()=> {
         this.faissdbClient.init();
         this.delKeys = [];
         this.inputs = [];
-        for(let i = 0; i < N; i++){
+        for(let i = 0; i < N; i++) {
           let key = getKey(i);
           let collections = ['main'];
           if(i%3 == 0) {

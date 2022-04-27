@@ -3,7 +3,7 @@
 #### Set ENV
 ```
 export FAISSDB_ROOT=[faissdb repository path]
-export FAISSDB_VERSION=0.0.4
+export FAISSDB_VERSION=0.1.4
 ```
 
 #### Get docker image
@@ -79,9 +79,8 @@ curl -v http://localhost:9091/replicaset -XPUT -d '{"replica": "rs", "members": 
 
 ### Test by faissdb_client
 ```
-git clone https://github.com/crumbjp/faissdb_client_node.git
-cd faissdb_client_node
+git clone https://github.com/crumbjp/faissdb.git
+cd faissdb/nodejs
 npm install
-NODE_PATH=src node ./test/index.js
-
+NODE_PATH=src node ./example/index.js
 ```
