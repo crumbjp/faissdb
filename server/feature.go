@@ -144,8 +144,8 @@ func InitRpcFeatureServer() {
 		faissdb.logger.Fatal("InitRpcFeatureServer() net.Listen() %v", err)
 	}
 	server := grpc.NewServer  (
-		grpc.MaxSendMsgSize(100*1024*1024),
-		grpc.MaxRecvMsgSize(100*1024*1024),
+		grpc.MaxSendMsgSize(-1),
+		grpc.MaxRecvMsgSize(-1),
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			MinTime: 2 * time.Second,
 			PermitWithoutStream: true,
