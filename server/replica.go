@@ -58,7 +58,7 @@ func (self *ReplicaMember) Connect() {
 	var err error
 	self.rpcClientConnection, err = grpc.Dial(
 		self.Host,
-		grpc.WithMaxMsgSize(-1),
+		grpc.WithMaxMsgSize(2*1024*1024*1024),
 		grpc.WithInsecure())
 	// self.rpcClientConnection, err = grpc.Dial(
 	// 	self.Host,
@@ -418,8 +418,8 @@ func InitRpcReplicaServer() {
     log.Fatalf("InitRpcReplicaServer() %v", err)
 	}
 	server := grpc.NewServer(
-		grpc.MaxSendMsgSize(-1),
-		grpc.MaxRecvMsgSize(-1),
+		grpc.MaxSendMsgSize(2*1024*1024*1024),
+		grpc.MaxRecvMsgSize(2*1024*1024*1024),
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			MinTime: 2 * time.Second,
 			PermitWithoutStream: true,
