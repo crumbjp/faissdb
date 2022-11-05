@@ -65,7 +65,6 @@ mv /usr/local/include/faiss/c_api/c_api/impl/AuxIndexStructures_c.h  /usr/local/
 
 ## protobuf
 ```
-apt install zip
 wget https://github.com/protocolbuffers/protobuf/releases/download/v3.15.8/protoc-3.15.8-linux-x86_64.zip
 unzip protoc-3.15.8-linux-x86_64.zip
 cp bin/protoc /usr/local/bin/
@@ -80,7 +79,6 @@ go get google.golang.org/protobuf/cmd/protoc-gen-go google.golang.org/grpc/cmd/p
 
 ### faissdb
 ```
-apt install libbz2-dev zlib1g-dev
 git clone https://github.com/crumbjp/faissdb.git
 cd faissdb
 git submodule init

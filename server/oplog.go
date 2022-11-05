@@ -102,9 +102,12 @@ func deleteOpLogThread() {
 
 func LastKey() string {
 	it := faissdb.oplogDB.db.NewIterator(faissdb.dataDB.defaultReadOptions)
-	it.SeekToLast()
-	lastKey := string(it.Key().Data())
 	defer it.Close()
+	it.SeekToLast()
+	lastKey := ""
+	if(it.Valid()) {
+		lastKey = string(it.Key().Data())
+	}
 	return lastKey
 }
 

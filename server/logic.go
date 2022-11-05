@@ -144,7 +144,7 @@ func Train(proportion float32, force bool) error {
 	if err := setStatus(STATUS_TRAINING); err != nil {
 		return err
 	}
-	faissdb.logger.Info("Train() Build data")
+	faissdb.logger.Info("Train(%f) Build data", proportion)
 	trainData := buildTrainData(proportion)
 	faissdb.logger.Info("Train() Train start (%d)", len(trainData) / config.Db.Faiss.Dimension)
 	localIndex.Train(trainData)
