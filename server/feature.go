@@ -41,7 +41,13 @@ func (self *RpcFeatureServer) Set(ctx context.Context, in *pb.SetRequest) (*pb.S
 		for _, data := range in.GetData() {
 			v := make([]float32, config.Db.Faiss.Dimension)
 			if(data.GetV() != nil) {
-				for i, double := range data.GetV() {
+				dataV := data.GetV()
+				if (len(dataV) != config.Db.Faiss.Dimension) {
+					faissdb.logger.Error("RpcFeatureServer.Set() GetV() length missmatch %v != %v", len(dataV), config.Db.Faiss.Dimension)
+					nError++
+					continue
+				}
+				for i, double := range dataV {
 					v[i] = float32(double)
 				}
 			} else {
