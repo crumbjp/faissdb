@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"sync"
-	"local.packages/go-faiss" // "github.com/DataIntelligenceCrew/go-faiss"
+	"github.com/crumbjp/go-faiss"
 	"errors"
 	"strings"
 	"time"

@@ -5,7 +5,8 @@ rm -rf /tmp/faissdb1/data/*
 rm -rf /tmp/faissdb2/data/*
 rm -rf /tmp/faissdb3/data/*
 
-. ~/.faissdb
+. /usr/local/.faissdb
+
 pushd `dirname $0`/../server
 go test -v
 popd

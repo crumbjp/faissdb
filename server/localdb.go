@@ -2,7 +2,7 @@ package main
 
 import (
 	"sync"
-	"github.com/tecbot/gorocksdb"
+	"github.com/linxGnu/grocksdb"
 	"encoding/binary"
 	"bytes"
 )
@@ -11,11 +11,11 @@ type LocalDB struct {
 	rwmutex sync.RWMutex
 	path string
 	name string
-	defaultBlockBasedTableOptions *gorocksdb.BlockBasedTableOptions
-	defaultOptions *gorocksdb.Options
-	db *gorocksdb.DB
-	defaultReadOptions *gorocksdb.ReadOptions
-	defaultWriteOptions *gorocksdb.WriteOptions
+	defaultBlockBasedTableOptions *grocksdb.BlockBasedTableOptions
+	defaultOptions *grocksdb.Options
+	db *grocksdb.DB
+	defaultReadOptions *grocksdb.ReadOptions
+	defaultWriteOptions *grocksdb.WriteOptions
 }
 
 func newLocalDB(path string) *LocalDB {
@@ -29,19 +29,19 @@ func (self *LocalDB) Open(dbconfig *Dbconfig) {
 	faissdb.logger.Info("LocalDB[%s].Open() start", self.name)
 	defer faissdb.logger.Info("LocalDB[%s].Open() end", self.name)
 	self.name = config.Db.Dbpath + self.path
-	self.defaultBlockBasedTableOptions = gorocksdb.NewDefaultBlockBasedTableOptions()
-	self.defaultBlockBasedTableOptions.SetBlockCache(gorocksdb.NewLRUCache(dbconfig.Capacity))
-	self.defaultOptions = gorocksdb.NewDefaultOptions()
+	self.defaultBlockBasedTableOptions = grocksdb.NewDefaultBlockBasedTableOptions()
+	self.defaultBlockBasedTableOptions.SetBlockCache(grocksdb.NewLRUCache(dbconfig.Capacity))
+	self.defaultOptions = grocksdb.NewDefaultOptions()
 	self.defaultOptions.SetBlockBasedTableFactory(self.defaultBlockBasedTableOptions)
 	self.defaultOptions.SetCreateIfMissing(true)
-	db, err := gorocksdb.OpenDb(self.defaultOptions, self.name)
+	db, err := grocksdb.OpenDb(self.defaultOptions, self.name)
 	if err != nil {
-		faissdb.logger.Fatal("LocalDB[%s].Open() gorocksdb.OpenDb() %v", self.name, err)
+		faissdb.logger.Fatal("LocalDB[%s].Open() grocksdb.OpenDb() %v", self.name, err)
 	}
 	self.db = db
-	self.defaultReadOptions = gorocksdb.NewDefaultReadOptions()
+	self.defaultReadOptions = grocksdb.NewDefaultReadOptions()
 	self.defaultReadOptions.SetFillCache(false)
-	self.defaultWriteOptions = gorocksdb.NewDefaultWriteOptions()
+	self.defaultWriteOptions = grocksdb.NewDefaultWriteOptions()
 }
 
 func (self *LocalDB) DestroyDb() {
@@ -53,7 +53,7 @@ func (self *LocalDB) DestroyDb() {
 	self.defaultReadOptions.Destroy()
 	self.defaultWriteOptions.Destroy()
 	self.db.Close()
-	gorocksdb.DestroyDb(self.name, self.defaultOptions)
+	grocksdb.DestroyDb(self.name, self.defaultOptions)
 	self.defaultOptions.Destroy()
 	self.defaultBlockBasedTableOptions = nil
 	self.defaultReadOptions = nil
@@ -113,7 +113,7 @@ func (self *LocalDB) PutInt64(key string, value int64) {
 	self.Put(key, buffer.Bytes())
 }
 
-func (self *LocalDB) Get(key string) *gorocksdb.Slice {
+func (self *LocalDB) Get(key string) *grocksdb.Slice {
 	self.rwmutex.RLock()
 	defer self.rwmutex.RUnlock()
 	if self.db == nil {

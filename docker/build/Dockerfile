@@ -4,10 +4,7 @@ ENV PATH "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
 ENV LC_ALL C.UTF-8
 
 RUN apt update
-RUN apt install -y libopenblas0 libsnappy1v5 liblz4-1 libzstd1 zlib1g libbz2-1.0 libgomp1 libgflags2.2 curl
-
-RUN --mount=type=bind,source=build/mnt,target=/mnt,rw \
-    bash --login /mnt/build.sh release
+RUN apt -y install build-essential cmake git curl vim unzip wget zip libopenblas-dev libsnappy-dev liblz4-dev libzstd-dev zlib1g-dev libbz2-dev libgflags-dev
 
 STOPSIGNAL SIGRTMIN+3
 CMD ["/usr/local/faissdb/bin/faissdb", "/usr/local/faissdb/conf/config.yml"]

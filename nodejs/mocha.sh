@@ -14,4 +14,4 @@ mkdir -p /tmp/faissdb3/data
 
 export NODE_ENV=test
 export NODE_PATH=src
-$CURDIR/node_modules/mocha/bin/mocha --config test/.mocharc.json --exit $@
+npx mocha --config test/.mocharc.json --exit $@

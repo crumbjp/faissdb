@@ -17,12 +17,19 @@ jobs:
         test_script:
           - test
     container:
-      image: crumbjp/faissdb@sha256:74b5a0fcf0e59ee1d2e2e5830a715266cf801ab26aaf1add7a575e4921e0a308
+      image: crumbjp/faissdb@sha256:9a664494d8c80317e4536d1083aa3c84cd27b09cac5b51b2355f6b4864b1f536
     steps:
-      - uses: actions/checkout@v2
+      - name: Set up a Git safe directory
+        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
+      - uses: actions/checkout@v3.2.0
 
       - name: prepare
         run: bash ci/prepare.sh
+
+      # - name: Debug
+      #   if: ${{ always() }}
+      #   uses: mxschmitt/action-tmate@v3
 
       - name: test_faissdb
         run: bash ci/test_faissdb.sh

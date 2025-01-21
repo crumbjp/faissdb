@@ -6,14 +6,14 @@ process:
   daemon: false
 http:
   port: 9091
-  maxconnections: 1000
+  maxconnections: 20
   httptimeout: 60
 db:
   dbpath: /tmp/faissdb1/data
   faiss:
     dimension: 2
     syncinterval: 60000
-    description: IVF2,PQ2_8
+    description: IVF2,PQ2x8
     metric: InnerProduct
     nprobe: 10
   metadb:
