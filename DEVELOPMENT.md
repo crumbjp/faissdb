@@ -18,9 +18,12 @@ cd docker
 ```
 
 ### Rebuild
-Rebuild server from [current source](https://github.com/crumbjp/faissdb/tree/master/docker/dev.sh#L11).
+Rebuild server from current source.
 
 ```
 cd docker
 ./dev.sh rebuild
 ```
+
+## More detail
+[dev.sh](https://github.com/crumbjp/faissdb/tree/master/docker/dev.sh#L11).
