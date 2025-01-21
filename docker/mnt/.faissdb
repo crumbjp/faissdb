@@ -1,0 +1,16 @@
+if [ -n "${GOENV_ROOT-}" ]; then
+  echo "${GOENV_ROOT}"
+else
+  export GOENV_ROOT=/usr/local/goenv
+  export PATH=$GOENV_ROOT/bin:$PATH
+  export GO111MODULE=on
+  eval "$(goenv init -)"
+fi
+
+if [ -n "${NODENV_ROOT-}" ]; then
+  echo "${NODENV_ROOT}"
+else
+  export PATH=/usr/local/nodenv/bin:$PATH
+  export NODENV_ROOT=/usr/local/nodenv
+  eval "$(nodenv init -)"
+fi

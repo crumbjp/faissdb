@@ -1,11 +1,11 @@
 process:
   loglv: trace
-  performancelog: false
+  performancelog: true
   logfile: /usr/local/faissdb/log/faissdb.log
   pidfile: /usr/local/faissdb/tmp/faissdb.pid
-  daemon: false
+  daemon: true
 http:
-  port: 9092
+  port: 9091
   maxconnections: 1000
   httptimeout: 60
 db:
@@ -13,7 +13,7 @@ db:
   faiss:
     dimension: 2
     syncinterval: 60000
-    description: IVF2,PQ2_8
+    description: IVF2,PQ2x8
     metric: InnerProduct
     nprobe: 10
   metadb:
@@ -25,8 +25,8 @@ db:
   logdb:
     capacity: 1073741824
 oplog:
-  term: 3600
+  term: 600
 feature:
-  listen: ":20022"
+  listen: ":20021"
 replica:
-  listen: ":21022"
+  listen: ":21021"

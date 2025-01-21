@@ -76,7 +76,7 @@ func rollbackStatus() {
 
 func start() {
 	faissdb.selfUuid = uuid.New().String()
-	faissdb.logger.Debug("start() %s", faissdb.selfUuid)
+	faissdb.logger.Info("start() %s", faissdb.selfUuid)
 	faissdb.rwmutex = sync.RWMutex{}
 	faissdb.replicaSyncMutex = sync.Mutex{}
 	setStatus(STATUS_STARTUP)

@@ -12,22 +12,13 @@ mkdir -p /tmp/faissdb3/log
 mkdir -p /tmp/faissdb3/tmp
 mkdir -p /tmp/faissdb3/data
 
-if [ "${UID}" = "0" ]; then
-    if [ "${HOME}" != "/root" ]; then
-        ln -s /root/go ~/
-        ln -s /root/.faissdb ~/
-    fi
-fi
-
-. ~/.faissdb
-git submodule init
-git submodule update
+. /usr/local/.faissdb
 
 pushd `dirname $0`/../server
+go mod tidy
 make
 popd
 
 pushd `dirname $0`/../nodejs
 npm install
-make
 popd

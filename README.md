@@ -6,6 +6,9 @@
 - Simple replication is supported.
 - Faiss indexes are always sync with local storage to restart process quickly.
 - Provides [gRPC](https://grpc.io/) based client I/F, so easy to develop clients.
+- Current version 0.2.0
+-- faiss 1.9.0
+-- rocksdb 9.8.4
 
 ## About Faiss
 Faiss is one of the most advanced ANN (approximate nearest neighbor) search library.
@@ -13,8 +16,7 @@ However, Faiss is fundamentally designed to working on memory, so it requires co
 
 ## Use
 - [Quick start (docker)](QUICK_START.md)
-- [Setup development environment(OSQ)](DEVELOPMENT_OSX.md)
-- [Setup development environment(ubuntu)](DEVELOPMENT_UBUNTU.md)
+- [Setup a development environment](DEVELOPMENT.md)
 
 ## Architecture
 ![](img/Architecture.png)
@@ -38,3 +40,10 @@ Almost same as Set.
 ## Client
 - Call gRPC directly. [feature.proto](/protos/feature.proto)
 - [nodejs](https://github.com/crumbjp/faissdb/tree/master/nodejs)
+
+## Replication (ReplicaSet)
+- A ReplicaSet includs one Primary-node and some secondary-nodes.
+- Can read and write from Primary-node, Secondary-node is read-only.
+- Primary-node write "indexes" and "oplog" when receiving write operations, Secondary-nodes will read "oplog" to sync.
+- Never promotes from secondary-node to primary-node automatically, needs reconfigure.
+- The case of adding the new secondary-node to the running ReplicaSet, The new node will sync all data from primary before starting service.

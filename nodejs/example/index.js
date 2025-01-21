@@ -41,16 +41,16 @@ const normalize = (vector) => {
   await client.del(['k1', 'k10', 'k20']);
   console.log('search');
   {
-    let [keys, distances] = await client.search('main', 10, normalize([0.1, 0.9]));
-    console.log(keys, distances);
+    let [keys, distances] = await client.search('main', 20, normalize([0.1, 0.9]));
+    console.log('Expects around k100', _.zip(keys, distances));
   }
-    {
+  {
     let v = normalize([1, 1]);
-    let [keys, distances] = await client.search('main', 10, {
+    let [keys, distances] = await client.search('main', 20, {
       '0': v[0],
       '1': v[1],
     });
-    console.log(keys, distances);
+    console.log('Expects around k500', _.zip(keys, distances));
   }
   process.exit(0);
 })();

@@ -9,105 +9,105 @@ const FAISSDB = '../server/faissdb';
 const FAISSDB_CONFPATH = '../config/test';
 
 const MAIN_RESULT =  [
-[ 'k87', 1.0001120567321777 ],
-  [ 'k91', 0.9999834299087524 ],
-  [ 'k90', 0.9999766945838928 ],
-  [ 'k89', 0.9999513626098633 ],
-  [ 'k92', 0.9999333620071411 ],
-  [ 'k88', 0.9999009966850281 ],
-  [ 'k93', 0.9998493194580078 ],
-  [ 'k86', 0.999740719795227 ],
-  [ 'k94', 0.9997310042381287 ],
-  [ 'k85', 0.999709963798523 ],
-  [ 'k81', 0.9996604919433594 ],
-  [ 'k95', 0.9995778203010559 ],
-  [ 'k96', 0.9993893504142761 ],
-  [ 'k82', 0.9992419481277466 ],
-  [ 'k83', 0.9992172122001648 ],
-  [ 'k97', 0.9991652369499207 ],
-  [ 'k84', 0.9990770816802979 ],
-  [ 'k98', 0.9989048838615417 ],
-  [ 'k99', 0.9986081719398499 ],
-  [ 'k100', 0.9982744455337524 ],
-  [ 'k79', 0.9981250762939453 ],
-  [ 'k103', 0.9981074333190918 ],
-  [ 'k101', 0.9979034066200256 ],
-  [ 'k78', 0.9977555274963379 ],
-  [ 'k80', 0.9975571632385254 ],
-  [ 'k102', 0.9974945187568665 ],
-  [ 'k77', 0.9974765777587891 ],
-  [ 'k75', 0.9972800612449646 ],
-  [ 'k76', 0.9969075322151184 ],
-  [ 'k105', 0.9963751435279846 ]
+  [ 'k87',  1.00011],
+  [ 'k91',  0.99998],
+  [ 'k90',  0.99997],
+  [ 'k89',  0.99995],
+  [ 'k92',  0.99993],
+  [ 'k88',  0.99990],
+  [ 'k93',  0.99984],
+  [ 'k86',  0.99974],
+  [ 'k94',  0.99973],
+  [ 'k85',  0.99970],
+  [ 'k81',  0.99966],
+  [ 'k95',  0.99957],
+  [ 'k96',  0.99938],
+  [ 'k82',  0.99924],
+  [ 'k83',  0.99921],
+  [ 'k97',  0.99916],
+  [ 'k84',  0.99907],
+  [ 'k98',  0.99890],
+  [ 'k99',  0.99860],
+  [ 'k100', 0.99827],
+  [ 'k79',  0.99812],
+  [ 'k103', 0.99810],
+  [ 'k101', 0.99790],
+  [ 'k78',  0.99775],
+  [ 'k80',  0.99755],
+  [ 'k102', 0.99749],
+  [ 'k77',  0.99747],
+  [ 'k75',  0.99728],
+  [ 'k76',  0.99690],
+  [ 'k105', 0.99637],
 ];
 
 const I3_RESULT = [
-  [ 'k87', 1.0001120567321777 ],
-  [ 'k93', 0.9998493194580078 ],
-  [ 'k81', 0.9996604919433594 ],
-  [ 'k96', 0.9993893504142761 ],
-  [ 'k84', 0.9990770816802979 ],
-  [ 'k99', 0.9986081719398499 ],
-  [ 'k78', 0.9977555274963379 ],
-  [ 'k102', 0.9974945187568665 ],
-  [ 'k72', 0.9951022267341614 ],
-  [ 'k108', 0.9942277669906616 ],
-  [ 'k69', 0.9934375882148743 ],
-  [ 'k111', 0.9920551776885986 ],
-  [ 'k66', 0.9915408492088318 ],
-  [ 'k63', 0.9893209934234619 ],
-  [ 'k114', 0.9892469644546509 ],
-  [ 'k117', 0.9865893125534058 ],
-  [ 'k57', 0.9848154187202454 ],
-  [ 'k54', 0.9822744727134705 ],
-  [ 'k123', 0.979584276676178 ],
-  [ 'k51', 0.9794931411743164 ],
-  [ 'k48', 0.9766508936882019 ],
-  [ 'k126', 0.9754918813705444 ],
-  [ 'k129', 0.97098708152771 ],
-  [ 'k42', 0.9704961180686951 ],
-  [ 'k39', 0.967267632484436 ],
-  [ 'k132', 0.9664472937583923 ],
-  [ 'k36', 0.9639403820037842 ],
-  [ 'k33', 0.9605231881141663 ],
-  [ 'k138', 0.9541409611701965 ],
-  [ 'k27', 0.9532678723335266 ]
+  [ 'k87',  1.00011],
+  [ 'k93',  0.99984],
+  [ 'k81',  0.99966],
+  [ 'k96',  0.99938],
+  [ 'k84',  0.99907],
+  [ 'k99',  0.99860],
+  [ 'k78',  0.99775],
+  [ 'k102', 0.99749],
+  [ 'k72',  0.99510],
+  [ 'k108', 0.99422],
+  [ 'k69',  0.99343],
+  [ 'k111', 0.99205],
+  [ 'k66',  0.99154],
+  [ 'k63',  0.98932],
+  [ 'k114', 0.98924],
+  [ 'k117', 0.98658],
+  [ 'k57',  0.98481],
+  [ 'k54',  0.98227],
+  [ 'k123', 0.97958],
+  [ 'k51',  0.97949],
+  [ 'k48',  0.97665],
+  [ 'k126', 0.97549],
+  [ 'k129', 0.97098],
+  [ 'k42',  0.97049],
+  [ 'k39',  0.96726],
+  [ 'k132', 0.96644],
+  [ 'k36',  0.96394],
+  [ 'k33',  0.96052],
+  [ 'k138', 0.95414],
+  [ 'k27',  0.95326],
 ];
 
 const I15_RESULT = [
-  [ 'k90', 0.9999766945838928 ],
-  [ 'k75', 0.9972800612449646 ],
-  [ 'k105', 0.9963751435279846 ],
-  [ 'k60', 0.9872412085533142 ],
-  [ 'k120', 0.9832820892333984 ],
-  [ 'k45', 0.9738624095916748 ],
-  [ 'k135', 0.9608237147331238 ],
-  [ 'k30', 0.9570244550704956 ],
-  [ 'k15', 0.9385786056518555 ],
-  [ 'k150', 0.928156852722168 ],
-  [ 'k0', 0.9191365242004395 ],
-  [ 'k165', 0.8889648914337158 ],
-  [ 'k180', 0.83761066198349 ],
-  [ 'k195', 0.7823975682258606 ],
-  [ 'k210', 0.7241705656051636 ],
-  [ 'k225', 0.6643639206886292 ],
-  [ 'k240', 0.604846179485321 ],
-  [ 'k255', 0.5476592183113098 ],
-  [ 'k270', 0.4930126368999481 ],
-  [ 'k285', 0.4416840970516205 ]
+  [ 'k90',  0.99997],
+  [ 'k75',  0.99728],
+  [ 'k105', 0.99637],
+  [ 'k60',  0.98724],
+  [ 'k120', 0.98328],
+  [ 'k45',  0.97386],
+  [ 'k135', 0.96082],
+  [ 'k30',  0.95702],
+  [ 'k15',  0.93857],
+  [ 'k150', 0.92815],
+  [ 'k0',   0.91913],
+  [ 'k165', 0.88896],
+  [ 'k180', 0.83761],
+  [ 'k195', 0.78239],
+  [ 'k210', 0.72417],
+  [ 'k225', 0.66436],
+  [ 'k240', 0.60484],
+  [ 'k255', 0.54765],
+  [ 'k270', 0.49301],
+  [ 'k285', 0.44168],
 ];
 
 const I9_RESULT = [
-  [ 'k90', 0.9999766945838928 ],
-  [ 'k81', 0.9996604919433594 ],
-  [ 'k99', 0.9986081719398499 ],
-  [ 'k72', 0.9951022267341614 ],
-  [ 'k108', 0.9942277669906616 ],
-  [ 'k63', 0.9893209934234619 ],
-  [ 'k117', 0.9865893125534058 ],
-  [ 'k54', 0.9822744727134705 ],
-  [ 'k126', 0.9754918813705444 ],
-  [ 'k45', 0.9738624095916748 ]
+  [ 'k90',  0.99997],
+  [ 'k81',  0.99966],
+  [ 'k99',  0.99860],
+  [ 'k72',  0.99510],
+  [ 'k108', 0.99422],
+  [ 'k63',  0.98932],
+  [ 'k117', 0.98658],
+  [ 'k54',  0.98227],
+  [ 'k126', 0.97549],
+  [ 'k45',  0.97386],
 ];
 
 const normalize = (vector) => {
@@ -157,10 +157,12 @@ const cmd = async (cmd, cwd = process.cwd(), extraEnv = {}, mode = {}) => {
           console.log(`[result] ${stdOutData}`);
           resolve(stdOutData);
         } else {
+          console.log(`Error code=${code} ${stdErrData}`);
           reject(`Error code=${code} ${stdErrData}`);
         }
       });
     } catch(e) {
+      console.log(e);
       reject(e);
     }
   });
@@ -183,7 +185,8 @@ describe('index', ()=> {
           }],
           debug: true,
           logger: {
-            info: console.log
+            info: console.log,
+            error: console.log,
           }
         });
         this.faissdbClient.init();
@@ -247,7 +250,7 @@ describe('index', ()=> {
             lastkey: '',
             status: 100,
             faissConfig: {
-              description: 'IVF2,PQ2_8',
+              description: 'IVF2,PQ2x8',
               metric: 'InnerProduct',
               nprobe: 10,
               dimension: 2,
@@ -294,7 +297,7 @@ describe('index', ()=> {
           expect(emptyKeys).to.deep.equals([]);
           await this.faissdbClient.train(1);
           let [keys, distances] = await this.faissdbClient.primary.search('main', 10, normalize([30, 70]));
-          expect(_.zip(keys, distances)).to.deep.equals(MAIN_RESULT.slice(0, 10));
+          expect(_.zip(keys, _.map(distances, (distance) => _.floor(distance, 5)))).to.deep.equals(MAIN_RESULT.slice(0, 10));
           let primaryDbStats = await this.faissdbClient.primary.dbstats();
           expect(_.sortBy(primaryDbStats.dbs, 'collection')).to.deep.equals([{
             collection: 'i15', ntotal: 20
@@ -329,7 +332,7 @@ describe('index', ()=> {
             collection: 'main', ntotal: 300
           }]);
           let [keys, distances] = await this.faissdbClient.search('main', 10, normalize([30, 70]));
-          expect(_.zip(keys, distances)).to.deep.equals(MAIN_RESULT.slice(0, 10));
+          expect(_.zip(keys, _.map(distances, (distance) => _.floor(distance, 5)))).to.deep.equals(MAIN_RESULT.slice(0, 10));
           resolve();
         } catch(e) {
           reject(e);
@@ -341,7 +344,7 @@ describe('index', ()=> {
       return new Promise(async (resolve, reject) => {
         try {
           let [keys, distances] = await this.faissdbClient.search('i3', 10, normalize([30, 70]));
-          expect(_.zip(keys, distances)).to.deep.equals(I3_RESULT.slice(0, 10));
+          expect(_.zip(keys, _.map(distances, (distance) => _.floor(distance, 5)))).to.deep.equals(I3_RESULT.slice(0, 10));
           resolve();
         } catch(e) {
           reject(e);
@@ -353,7 +356,7 @@ describe('index', ()=> {
       return new Promise(async (resolve, reject) => {
         try {
           let [keys, distances] = await this.faissdbClient.search('i15', 10, normalize([30, 70]));
-          expect(_.zip(keys, distances)).to.deep.equals(I15_RESULT.slice(0, 10));
+          expect(_.zip(keys, _.map(distances, (distance) => _.floor(distance, 5)))).to.deep.equals(I15_RESULT.slice(0, 10));
           resolve();
         } catch(e) {
           reject(e);
@@ -387,15 +390,15 @@ describe('index', ()=> {
           };
           {
             let [keys, distances] = await this.faissdbClient.search('main', 10, normalize([30, 70]));
-            expect(_.zip(keys, distances)).to.deep.equals(_.reject(MAIN_RESULT, r => isInvalid(r[0])).slice(0,10));
+            expect(_.zip(keys, _.map(distances, (distance) => _.floor(distance, 5)))).to.deep.equals(_.reject(MAIN_RESULT, r => isInvalid(r[0])).slice(0,10));
           }
           {
             let [keys, distances] = await this.faissdbClient.search('i3', 10, normalize([30, 70]));
-            expect(_.zip(keys, distances)).to.deep.equals(_.reject(I3_RESULT, r => isInvalid(r[0])).slice(0,10));
+            expect(_.zip(keys, _.map(distances, (distance) => _.floor(distance, 5)))).to.deep.equals(_.reject(I3_RESULT, r => isInvalid(r[0])).slice(0,10));
           }
           {
             let [keys, distances] = await this.faissdbClient.search('i15', 10, normalize([30, 70]));
-            expect(_.zip(keys, distances)).to.deep.equals(_.reject(I15_RESULT, r => isInvalid(r[0])).slice(0,10));
+            expect(_.zip(keys, _.map(distances, (distance) => _.floor(distance, 5)))).to.deep.equals(_.reject(I15_RESULT, r => isInvalid(r[0])).slice(0,10));
           }
           resolve();
         } catch(e) {
@@ -461,19 +464,19 @@ describe('index', ()=> {
           };
           {
             let [keys, distances] = await this.faissdbClient.secondaries[1].search('main', 10, normalize([30, 70]));
-            expect(_.zip(keys, distances)).to.deep.equals(_.reject(MAIN_RESULT, r => isMainInvalid(r[0])).slice(0,10));
+            expect(_.zip(keys, _.map(distances, (distance) => _.floor(distance, 5)))).to.deep.equals(_.reject(MAIN_RESULT, r => isMainInvalid(r[0])).slice(0,10));
           }
           {
             let [keys, distances] = await this.faissdbClient.secondaries[1].search('i3', 10, normalize([30, 70]));
-            expect(_.zip(keys, distances)).to.deep.equals(_.reject(I3_RESULT, r => isInvalid(r[0])).slice(0,10));
+            expect(_.zip(keys, _.map(distances, (distance) => _.floor(distance, 5)))).to.deep.equals(_.reject(I3_RESULT, r => isInvalid(r[0])).slice(0,10));
           }
           {
             let [keys, distances] = await this.faissdbClient.secondaries[1].search('i9', 10, normalize([30, 70]));
-            expect(_.zip(keys, distances)).to.deep.equals(I9_RESULT);
+            expect(_.zip(keys, _.map(distances, (distance) => _.floor(distance, 5)))).to.deep.equals(I9_RESULT);
           }
           {
             let [keys, distances] = await this.faissdbClient.secondaries[1].search('i15', 10, normalize([30, 70]));
-            expect(_.zip(keys, distances)).to.deep.equals(_.reject(I15_RESULT, r => isInvalid(r[0])).slice(0,10));
+            expect(_.zip(keys, _.map(distances, (distance) => _.floor(distance, 5)))).to.deep.equals(_.reject(I15_RESULT, r => isInvalid(r[0])).slice(0,10));
           }
           resolve();
         } catch(e) {
