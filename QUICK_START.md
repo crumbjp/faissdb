@@ -1,4 +1,4 @@
-## Simple primary/secondary/secondary
+## Simple primary
 ### Start faissdb
 #### Set ENV
 ```

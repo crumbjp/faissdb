@@ -40,3 +40,10 @@ Almost same as Set.
 ## Client
 - Call gRPC directly. [feature.proto](/protos/feature.proto)
 - [nodejs](https://github.com/crumbjp/faissdb/tree/master/nodejs)
+
+## Replication (ReplicaSet)
+- A ReplicaSet includs one Primary-node and some secondary-nodes.
+- Can read and write from Primary-node, Secondary-node is read-only.
+- Primary-node write "indexes" and "oplog" when receiving write operations, Secondary-nodes will read "oplog" to sync.
+- Never promotes from secondary-node to primary-node automatically, needs reconfigure.
+- The case of adding the new secondary-node to the running ReplicaSet, The new node will sync all data from primary before starting service.
