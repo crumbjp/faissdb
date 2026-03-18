@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-
 if [ "$1" == "release" ]; then
   echo Do nothing
 else

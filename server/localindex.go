@@ -216,15 +216,21 @@ func (self *FaissIndex) Ntotal() int64 {
 
 var localIndex *LocalIndex
 
+type localIndexMap map[string]*FaissIndex
+
 type LocalIndex struct {
-	indexes map[string]*FaissIndex
+	indexes localIndexMap
 }
 
 func initLocalIndex() {
 	faissdb.logger.Info("initLocalIndex()")
 	self := &LocalIndex{}
-	self.indexes = map[string]*FaissIndex{}
+	self.indexes = localIndexMap{}
 	localIndex = self
+}
+
+func (self *LocalIndex) Indexes() localIndexMap {
+	return self.indexes
 }
 
 func (self *LocalIndex) OpenAllIndex() error {
@@ -243,35 +249,38 @@ func (self *LocalIndex) OpenAllIndex() error {
 		value := it.Value()
 		defer value.Free()
 		collection := string(value.Data())
-		self.indexes[collection] = newFaissIndex(collection)
-		self.indexes[collection].Open(true)
+		indexes := self.Indexes()
+		indexes[collection] = newFaissIndex(collection)
+		indexes[collection].Open(true)
 	}
 	return nil
 }
 
 func (self *LocalIndex) CloseAll() {
-	for _, index := range self.indexes {
+	for _, index := range self.Indexes() {
 		index.rwmutex.Lock()
 		index.CloseWithoutLock()
 		index.rwmutex.Unlock()
 	}
-	self.indexes = map[string]*FaissIndex{}
+	self.indexes = localIndexMap{}
 }
 
 func (self *LocalIndex) Ntotal(collection string) int64 {
-	if self.indexes[collection] != nil {
-		return self.indexes[collection].Ntotal()
+	indexes := self.Indexes()
+	if indexes[collection] != nil {
+		return indexes[collection].Ntotal()
 	}
 	return 0
 }
 
 func (self *LocalIndex) Add(faissdbRecord *pb.FaissdbRecord) {
 	for _, collection := range faissdbRecord.Collections {
-		if self.indexes[collection] == nil {
-			self.indexes[collection] = newFaissIndex(collection)
-			self.indexes[collection].Open(true)
+		indexes := self.Indexes()
+		if indexes[collection] == nil {
+			indexes[collection] = newFaissIndex(collection)
+			indexes[collection].Open(true)
 		}
-		err := self.indexes[collection].AddWithIDs(faissdbRecord.V, []int64{faissdbRecord.Id})
+		err := indexes[collection].AddWithIDs(faissdbRecord.V, []int64{faissdbRecord.Id})
 		if err != nil {
 			panic(err)
 		}
@@ -279,8 +288,9 @@ func (self *LocalIndex) Add(faissdbRecord *pb.FaissdbRecord) {
 }
 
 func (self *LocalIndex) RemoveRaw(collection string, ids []int64) int {
-	if self.indexes[collection] != nil {
-		self.indexes[collection].RemoveIDs(ids)
+	indexes := self.Indexes()
+	if indexes[collection] != nil {
+		indexes[collection].RemoveIDs(ids)
 	}
 	return 0
 }
@@ -289,12 +299,6 @@ func (self *LocalIndex) Remove(faissdbRecord *pb.FaissdbRecord) int {
 	performMain := faissdb.logger.PerformStart("LocalIndex.Remove main")
 	faissdb.logger.PerformEnd("LocalIndex.Remove main", performMain)
 	for _, collection := range faissdbRecord.Collections {
-		if self.indexes[collection] == nil {
-			performOpen := faissdb.logger.PerformStart("LocalIndex.Remove Open")
-			self.indexes[collection] = newFaissIndex(collection)
-			self.indexes[collection].Open(true)
-			faissdb.logger.PerformEnd("LocalIndex.Remove Open", performOpen)
-		}
 		performRemove := faissdb.logger.PerformStart("LocalIndex.Remove Remove")
 		self.RemoveRaw(collection, []int64{faissdbRecord.Id})
 		faissdb.logger.PerformEnd("LocalIndex.Remove Remove", performRemove)
@@ -313,7 +317,7 @@ func (self *LocalIndex) ResetToTrained() {
 	if err != nil {
 		faissdb.logger.Error("LocalIndex.ResetToTrained() ReadFile(TrainedFilePath()) %v", err)
 	}
-	for collection, index := range self.indexes {
+	for collection, index := range self.Indexes() {
 		index.rwmutex.Lock()
 		index.CloseWithoutLock()
 		index.rwmutex.Unlock()
@@ -329,7 +333,7 @@ func (self *LocalIndex) ResetToTrained() {
 func (self *LocalIndex) Write() {
 	faissdb.logger.Info("LocalIndex.Write() start")
 	lastkey := LastKey()
-	for _, index := range self.indexes {
+	for _, index := range self.Indexes() {
 		index.Write()
 	}
 	faissdb.metaDB.PutString("lastkey", lastkey)
@@ -388,8 +392,9 @@ func (self *LocalIndex) Train(trainData []float32) {
 }
 
 func (self *LocalIndex) Search(collection string, vector []float32, n int64) ([]float32, []int64) {
-	if self.indexes[collection] != nil {
-		return self.indexes[collection].Search(vector, n)
+	indexes := self.Indexes()
+	if indexes[collection] != nil {
+		return indexes[collection].Search(vector, n)
 	}
 	return nil, nil
 }

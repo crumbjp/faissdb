@@ -174,3 +174,16 @@ func (self *LocalDB) GetRawData(startKey string, length int) ([]string, [][]byte
 	}
 	return keys[0:count], values[0:count], nextKey
 }
+
+func (self *LocalDB) Count() int64 {
+	self.rwmutex.RLock()
+	defer self.rwmutex.RUnlock()
+	if self.db == nil {
+		return 0
+	}
+	count, ok := self.db.GetIntProperty("rocksdb.estimate-num-keys")
+	if !ok {
+		return 0
+	}
+	return int64(count)
+}
