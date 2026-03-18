@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"github.com/crumbjp/go-faiss"
 	"errors"
 	"strings"
@@ -90,13 +91,23 @@ func (self *FaissIndex) Open(fromTrained bool) error {
 
 func (self *FaissIndex) _PostOpen() {
 	var err error
-	self.parameterSpace, err = faiss. NewParameterSpace()
+	self.parameterSpace, err = faiss.NewParameterSpace()
 	if err != nil {
 		panic(err)
 	}
 	err = self.parameterSpace.SetIndexParameter(self.index, "nprobe", float64(self.config.Nprobe))
 	if err != nil {
 		panic(err)
+	}
+	if indexIVF := faiss.AsIVF(self.index); indexIVF != nil {
+		err = indexIVF.SetDirectMapType(faiss.DirectMapHashtable)
+		if err != nil {
+			panic(err)
+		}
+		err = indexIVF.MakeDirectMap()
+		if err != nil {
+			panic(err)
+		}
 	}
 	faissdb.metaDB.PutString(META_KEY_DB_PREFIX + self.name, self.name)
 	faissdb.logger.Info("FaissIndex[%s]._PostOpen() total: %v", self.name, self.index.Ntotal())
@@ -219,23 +230,33 @@ var localIndex *LocalIndex
 type localIndexMap map[string]*FaissIndex
 
 type LocalIndex struct {
-	indexes localIndexMap
+	indexes atomic.Pointer[localIndexMap]
 }
 
 func initLocalIndex() {
 	faissdb.logger.Info("initLocalIndex()")
 	self := &LocalIndex{}
-	self.indexes = localIndexMap{}
+	indexes := localIndexMap{}
+	self.indexes.Store(&indexes)
 	localIndex = self
 }
 
 func (self *LocalIndex) Indexes() localIndexMap {
-	return self.indexes
+	indexes := self.indexes.Load()
+	if indexes == nil {
+		return nil
+	}
+	return *indexes
+}
+
+func (self *LocalIndex) ReplaceIndexes(indexes localIndexMap) {
+	self.indexes.Store(&indexes)
 }
 
 func (self *LocalIndex) OpenAllIndex() error {
 	faissdb.logger.Info("LocalIndex.OpenAllIndex() start")
 	defer faissdb.logger.Info("LocalIndex.OpenAllIndex() end")
+	indexes := localIndexMap{}
 	it := faissdb.metaDB.db.NewIterator(faissdb.dataDB.defaultReadOptions)
 	it.Seek([]byte(META_KEY_DB_PREFIX))
 	defer it.Close()
@@ -249,10 +270,10 @@ func (self *LocalIndex) OpenAllIndex() error {
 		value := it.Value()
 		defer value.Free()
 		collection := string(value.Data())
-		indexes := self.Indexes()
 		indexes[collection] = newFaissIndex(collection)
 		indexes[collection].Open(true)
 	}
+	self.ReplaceIndexes(indexes)
 	return nil
 }
 
@@ -262,7 +283,7 @@ func (self *LocalIndex) CloseAll() {
 		index.CloseWithoutLock()
 		index.rwmutex.Unlock()
 	}
-	self.indexes = localIndexMap{}
+	self.ReplaceIndexes(localIndexMap{})
 }
 
 func (self *LocalIndex) Ntotal(collection string) int64 {
@@ -277,8 +298,14 @@ func (self *LocalIndex) Add(faissdbRecord *pb.FaissdbRecord) {
 	for _, collection := range faissdbRecord.Collections {
 		indexes := self.Indexes()
 		if indexes[collection] == nil {
-			indexes[collection] = newFaissIndex(collection)
-			indexes[collection].Open(true)
+			newIndexes := make(localIndexMap, len(indexes) + 1)
+			for name, index := range indexes {
+				newIndexes[name] = index
+			}
+			newIndexes[collection] = newFaissIndex(collection)
+			newIndexes[collection].Open(true)
+			self.ReplaceIndexes(newIndexes)
+			indexes = newIndexes
 		}
 		err := indexes[collection].AddWithIDs(faissdbRecord.V, []int64{faissdbRecord.Id})
 		if err != nil {

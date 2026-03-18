@@ -3,6 +3,7 @@ module faissdb
 go 1.23.4
 
 replace github.com/crumbjp/faissdb/server => ./
+replace github.com/crumbjp/go-faiss => ../../go-faiss
 
 require (
 	github.com/crumbjp/faissdb/server v0.0.0-20240207154259-83f6225dc708
