@@ -75,9 +75,14 @@ fi
 
 if [ "$1" == "manifest" ]; then
   set -e
+  echo docker manifest create "${MANIFEST}" "${MANIFEST}-x86_64" "${MANIFEST}-arm64" --amend
   docker manifest create "${MANIFEST}" "${MANIFEST}-x86_64" "${MANIFEST}-arm64" --amend
-#  docker manifest annotate --arch amd64 "${MANIFEST}" "${MANIFEST}-x86_64"
-#  docker manifest annotate --arch arm64 "${MANIFEST}" "${MANIFEST}-arm64"
+  echo docker manifest annotate --arch amd64 "${MANIFEST}" "${MANIFEST}-x86_64"
+  docker manifest annotate --arch amd64 "${MANIFEST}" "${MANIFEST}-x86_64"
+  echo docker manifest annotate --arch arm64 "${MANIFEST}" "${MANIFEST}-arm64"
+  docker manifest annotate --arch arm64 "${MANIFEST}" "${MANIFEST}-arm64"
+  echo docker manifest inspect "${MANIFEST}"
   docker manifest inspect "${MANIFEST}"
+  echo docker manifest push ${MANIFEST}
   docker manifest push ${MANIFEST}
 fi

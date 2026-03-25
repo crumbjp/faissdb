@@ -7,4 +7,5 @@ set -e
 docker image build \
   --build-context faissdb=.. \
   --build-context gofaiss=../../go-faiss \
+  --provenance=false \
   -t "${RELEASE_IMAGE}" .
