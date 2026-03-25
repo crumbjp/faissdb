@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 	"errors"
 	"sync"
@@ -177,7 +178,7 @@ func shutdownProcess(clearReplicaSet bool) {
 
 func start() {
 	faissdb.selfUuid = uuid.New().String()
-	faissdb.logger.Info("start() %s", faissdb.selfUuid)
+	faissdb.logger.InfoMem("start() %s", faissdb.selfUuid)
 	faissdb.rwmutex = sync.RWMutex{}
 	faissdb.replicaSyncMutex = sync.Mutex{}
 	setStatus(STATUS_STARTUP)
@@ -214,6 +215,9 @@ func main() {
 		configFile = os.Args[1]
 	}
 	loadConfig(configFile)
+	if config.Process.Memlimit > 0 {
+		debug.SetMemoryLimit(config.Process.Memlimit)
+	}
 	InitLogger(config.Process.Logfile)
 	if config.Process.Daemon {
 		context := &daemon.Context{

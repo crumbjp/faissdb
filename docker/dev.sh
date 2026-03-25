@@ -9,6 +9,7 @@ function start_container {
   docker run --name="${CONTAINER_NAME}" -ti --tmpfs /run --tmpfs /run/lock --tmpfs /tmp:exec \
    -v `pwd`/build/mnt:/mnt \
    -v `pwd`/..:/mnt/faissdb \
+   -v `pwd`/../../go-faiss:/mnt/go-faiss \
    -v `pwd`/build/mnt/data:/usr/local/faissdb/data \
    -v `pwd`/build/mnt/log:/usr/local/faissdb/log \
    -v `pwd`/../nodejs/example:/usr/local/faissdb/conf \
@@ -41,6 +42,15 @@ if [ "$1" == "setup" ]; then
   else
     curl -v http://localhost:9091/replicaset -XPUT -d '{"replica": "rs", "members": [{"id": 1, "host": "host.docker.internal:21021", "primary": true}]}'
   fi
+fi
+
+if [ "$1" == "train" ]; then
+  PROPORTION="${2:-1}"
+  curl -v -XPOST http://localhost:9091/train -d "${PROPORTION}"
+fi
+
+if [ "$1" == "fullsync" ]; then
+  curl -v -XPOST http://localhost:9091/fullsync
 fi
 
 if [ "$1" == "stop" ]; then

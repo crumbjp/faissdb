@@ -3,7 +3,7 @@
 #### Set ENV
 ```
 export FAISSDB_ROOT=[faissdb repository path]
-export FAISSDB_VERSION=0.2.0
+export FAISSDB_VERSION=$(cat docker/version)
 ```
 
 #### Get docker image

@@ -6,9 +6,11 @@
 - Simple replication is supported.
 - Faiss indexes are always sync with local storage to restart process quickly.
 - Provides [gRPC](https://grpc.io/) based client I/F, so easy to develop clients.
-- Current version 0.2.0
--- faiss 1.9.0
--- rocksdb 9.8.4
+- Current version: see [docker/version](docker/version)
+-- faiss 1.14.1
+-- rocksdb 10.9.1
+- [CHANGELOG](CHANGELOG.md)
+- [Configuration Reference](REFERENCE.md)
 
 ## About Faiss
 Faiss is one of the most advanced ANN (approximate nearest neighbor) search library.

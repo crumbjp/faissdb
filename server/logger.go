@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"log"
+	"runtime"
 	"time"
 )
 
@@ -59,6 +61,32 @@ func (self *Logger) Error(format string, args ...interface{}) {
 
 func (self *Logger) Fatal(format string, args ...interface{}) {
 	log.Fatalf("[FATAL] " + format, args...)
+}
+
+func memSuffix() string {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	rss := uint64(0)
+	if data, err := os.ReadFile("/proc/self/statm"); err == nil {
+		var pages uint64
+		fmt.Sscanf(string(data), "%d %d", &pages, &pages)
+		rss = pages * 4096 / 1024 / 1024
+	}
+	return fmt.Sprintf(" (mem: alloc=%dMB sys=%dMB rss=%dMB)", m.Alloc/1024/1024, m.Sys/1024/1024, rss)
+}
+
+func (self *Logger) InfoMem(format string, args ...interface{}) {
+	if self.loglv >= LOGLV_INFO {
+		msg := fmt.Sprintf(format, args...)
+		log.Printf("[INFO] %s%s", msg, memSuffix())
+	}
+}
+
+func (self *Logger) WarnMem(format string, args ...interface{}) {
+	if self.loglv >= LOGLV_WARN {
+		msg := fmt.Sprintf(format, args...)
+		log.Printf("[WARN] %s%s", msg, memSuffix())
+	}
 }
 
 func (self *Logger) PerformStart(key string) int64 {

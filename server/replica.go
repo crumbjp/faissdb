@@ -15,6 +15,8 @@ import (
 	"context"
 )
 
+var ErrNeedFullSync = errors.New("need full sync")
+
 const (
 	FULLSYNC_BULKSIZE = 1000
 	OPLOG_BULKSIZE = 1000
@@ -525,7 +527,7 @@ func RpcReplicaGetCurrentOplog(startKey string, length int32) (*pb.GetCurrentOpl
 }
 
 func ReplicaFullSync() {
-	faissdb.logger.Info("ReplicaFullSync() start")
+	faissdb.logger.InfoMem("ReplicaFullSync() start")
 	defer faissdb.logger.Info("ReplicaFullSync() end")
 	var data []byte
 	for ;; {
@@ -545,7 +547,7 @@ func ReplicaFullSync() {
 	localIndex.ResetToTrained()
 	var masterLastKey string
 	masterLastKey, err = RpcReplicaGetLastKey()
-	faissdb.logger.Info("ReplicaFullSync() masterLastKey: %s", masterLastKey)
+	faissdb.logger.InfoMem("ReplicaFullSync() masterLastKey: %s", masterLastKey)
 	currentKey := ""
 	count := 0
 	for ;; {
@@ -563,7 +565,7 @@ func ReplicaFullSync() {
 			break
 		}
 		currentKey = reply.GetNextkey()
-		faissdb.logger.Info("ReplicaFullSync() next: %s count: %v", currentKey, count)
+		faissdb.logger.InfoMem("ReplicaFullSync() next: %s count: %v", currentKey, count)
 	}
 	PutOplogWithKey(masterLastKey, OP_SYSTEM, "", []byte("FullSync"))
 	ReplicaSync()
@@ -596,6 +598,8 @@ func ApplyOplog(oplog *Oplog) error {
 		faissdb.logger.PerformEnd("ApplyOplog DelRaw", performDelRaw)
 	} else if oplog.op == OP_DROPALL {
 		DropallRaw()
+	} else if oplog.op == OP_FULLSYNC {
+		return ErrNeedFullSync
 	} else if oplog.op == OP_SYSTEM {
 	}
 	return nil
@@ -624,6 +628,12 @@ func ReplicaSync() error {
 			performApplyOplog := faissdb.logger.PerformStart("ReplicaSync Apply")
 			err = ApplyOplog(oplog)
 			faissdb.logger.PerformEnd("ReplicaSync Apply", performApplyOplog)
+			if err == ErrNeedFullSync {
+				faissdb.logger.InfoMem("ReplicaSync() OP_FULLSYNC received, triggering ReplicaFullSync")
+				PutOplogWithKey(reply.GetKeys()[i], oplog.op, oplog.key, oplog.d)
+				ReplicaFullSync()
+				return nil
+			}
 			if err != nil {
 				return err
 			}
