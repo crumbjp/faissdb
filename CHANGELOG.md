@@ -11,6 +11,7 @@
 ### Bug Fixes
 - **LocalDB resource release order**: `LocalDB.DestroyDb` and `LocalDB.Close` now release RocksDB resources in reverse order of construction (WriteOptions / ReadOptions → DB → Options → BlockBasedTableOptions). The previous order destroyed `BlockBasedTableOptions` (which owns the LRU block cache) before closing the DB, leaving the block cache's native allocation unreleased after `DestroyDb`. This manifested during `FullLocalSync` as an extra ~1GB of native RSS per configured `iddb.capacity` carried into the subsequent `SyncFromLocalDb` phase, contributing to OOM on tight memory budgets.
 - **Atomic FAISS index writes**: `FaissIndex.flush` now writes to `<path>.tmp`, fsyncs the fd (via `go-faiss` `WriteIndexFsync`), and renames to the final path. `FaissIndex.Open` removes any leftover `.tmp` at startup. Previously `faiss.WriteIndex` opened the final path directly and truncated it to zero before streaming new content, so any process kill (SIGKILL, systemctl stop timeout, OOM Killer) during write left a corrupted partial file on disk — surfacing as `read error: N != M` on next startup. Requires go-faiss with `WriteIndexFsync` (commit `8bb765c` or later).
+- **`LocalIndex.SyncFromLocalDb` log format**: removed stray `%s` + `start` (copy-paste leftover from `SyncLocalOplog`) that referenced the package-level `start()` function. `go vet` (run by `go test`) flagged it as "format %s arg start is a func value, not called" and blocked CI.
 
 ## 0.3.0
 

@@ -408,8 +408,8 @@ func (self *LocalIndex) Write() {
 }
 
 func (self *LocalIndex) SyncFromLocalDb() {
-	faissdb.logger.InfoMem("LocalIndex.SyncFromLocalDb() start %s", start)
-	defer faissdb.logger.Info("LocalIndex.SyncFromLocalDb() end %s", start)
+	faissdb.logger.InfoMem("LocalIndex.SyncFromLocalDb() start")
+	defer faissdb.logger.Info("LocalIndex.SyncFromLocalDb() end")
 	it := faissdb.dataDB.db.NewIterator(faissdb.dataDB.defaultReadOptions)
 	it.Seek([]byte(""))
 	defer it.Close()
