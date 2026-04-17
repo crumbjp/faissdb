@@ -35,11 +35,32 @@ All development operations are done through `docker/dev.sh`.
 
 | Command | Description |
 |---|---|
-| `build_ci_container` | Build a CI Docker image. |
+| `build_ci_container` | Build a CI Docker image (`crumbjp/faissdb:<version>-ci`). Layered on `faissdb:build`, adds only nodenv + Node.js. |
 | `start_release_container` | Start a container from the release image. |
 | `start_manifest_container` | Start a container from the manifest image. |
 | `push` | Push the release image to Docker Hub. |
 | `manifest` | Create and push a multi-arch manifest. |
+
+### CI image
+
+GitHub Actions pulls `crumbjp/faissdb:<version>-ci` so CI does not rebuild native libs on every run. Rebuild and re-push this image when any of the following changes:
+
+- `server/.go-version` (Go version pinned by goenv)
+- RocksDB / FAISS / protoc versions in `docker/mnt/build.sh`
+- Node.js version in `docker/Dockerfile.ci`
+- Additional apt packages required by the build
+
+Typical flow:
+
+```
+cd docker
+./build.sh                       # creates faissdb:build (heavy first time; retry/keep args skip cleanup)
+./dev.sh build_ci_container      # creates crumbjp/faissdb:<version>-ci on top of faissdb:build
+docker login
+docker push crumbjp/faissdb:<version>-ci
+```
+
+After the push, pin the returned sha256 digest in `.github/workflows/main.yml` (replace the mutable tag) for reproducible CI.
 
 ## Typical workflow
 

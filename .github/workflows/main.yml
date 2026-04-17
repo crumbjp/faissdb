@@ -11,6 +11,12 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # CI image is pre-built locally by docker/dev.sh build_ci_container and
+    # pushed to Docker Hub. Rebuild and re-push whenever server/.go-version,
+    # native dependencies (RocksDB / FAISS / protoc), or Node change. See
+    # DEVELOPMENT.md "CI image" section. Pin to a sha256 digest once pushed.
+    container:
+      image: crumbjp/faissdb:0.3.1-ci
     steps:
       - uses: actions/checkout@v4
         with:
@@ -21,6 +27,15 @@ jobs:
           repository: crumbjp/go-faiss
           path: go-faiss
 
-      - name: Run CI
+      - name: Mark git safe directory
+        run: |
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}/faissdb"
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}/go-faiss"
+
+      - name: Server tests
         working-directory: faissdb
-        run: bash ci/run.sh
+        run: bash ci/test_faissdb.sh
+
+      - name: Client tests
+        working-directory: faissdb
+        run: bash ci/test_client.sh
