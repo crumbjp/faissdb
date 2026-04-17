@@ -1,38 +1,44 @@
 name: CI
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 20
-      matrix:
-        test_script:
-          - test
+    # arm64 runner: matches the CI image architecture (arm64 only for now).
+    # When an amd64 CI image is also published, add a job matrix or switch
+    # back to ubuntu-latest with a multi-arch manifest.
+    runs-on: ubuntu-24.04-arm
+    # CI image is pre-built locally by docker/dev.sh build_ci_container and
+    # pushed to Docker Hub. Rebuild and re-push whenever server/.go-version,
+    # native dependencies (RocksDB / FAISS / protoc), or Node change. See
+    # DEVELOPMENT.md "CI image" section.
     container:
-      image: crumbjp/faissdb@sha256:9a664494d8c80317e4536d1083aa3c84cd27b09cac5b51b2355f6b4864b1f536
+      image: crumbjp/faissdb@sha256:408b0454241495936a8afbf91034f73956654dbf138ba27d9ec782d9b406d8ae
     steps:
-      - name: Set up a Git safe directory
-        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+      - uses: actions/checkout@v4
+        with:
+          path: faissdb
 
-      - uses: actions/checkout@v3.2.0
+      - uses: actions/checkout@v4
+        with:
+          repository: crumbjp/go-faiss
+          path: go-faiss
 
-      - name: prepare
-        run: bash ci/prepare.sh
+      - name: Mark git safe directory
+        run: |
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}/faissdb"
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}/go-faiss"
 
-      # - name: Debug
-      #   if: ${{ always() }}
-      #   uses: mxschmitt/action-tmate@v3
-
-      - name: test_faissdb
+      - name: Server tests
+        working-directory: faissdb
         run: bash ci/test_faissdb.sh
 
-      - name: test_client
+      - name: Client tests
+        working-directory: faissdb
         run: bash ci/test_client.sh

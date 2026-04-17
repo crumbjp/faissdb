@@ -39,6 +39,7 @@ type Faissdb struct {
 	metaDB *LocalDB
 	dataDB *LocalDB
 	idDB *LocalDB
+	replicaDB *LocalDB
 	rwmutex sync.RWMutex
 	status int
 	prevStatus int
@@ -163,12 +164,13 @@ func shutdownProcess(clearReplicaSet bool) {
 		localIndex.Write()
 		faissdb.metaDB.PutString("lastkey", lastKey)
 		if clearReplicaSet {
-			faissdb.metaDB.PutInt64("ReplicaSetTs", 0)
-			faissdb.metaDB.PutString("ReplicaSet", "")
+			faissdb.replicaDB.PutInt64("ReplicaSetTs", 0)
+			faissdb.replicaDB.PutString("ReplicaSet", "")
 		}
 		faissdb.idDB.Close()
 		faissdb.dataDB.Close()
 		faissdb.oplogDB.Close()
+		faissdb.replicaDB.Close()
 		faissdb.metaDB.Close()
 		faissdb.replicaSyncMutex.Unlock()
 		faissdb.logger.Info("shutdownProcess() end")
@@ -176,7 +178,7 @@ func shutdownProcess(clearReplicaSet bool) {
 	})
 }
 
-func start() {
+func start(fullsyncMode bool) {
 	faissdb.selfUuid = uuid.New().String()
 	faissdb.logger.InfoMem("start() %s", faissdb.selfUuid)
 	faissdb.rwmutex = sync.RWMutex{}
@@ -189,12 +191,28 @@ func start() {
 	faissdb.dataDB.Open(&config.Db.Datadb)
 	faissdb.idDB = newLocalDB("/id")
 	faissdb.idDB.Open(&config.Db.Iddb)
-	go InitRpcReplicaServer()
+	faissdb.replicaDB = newLocalDB("/replica")
+	faissdb.replicaDB.Open(&config.Db.Replicadb)
+	migrateReplicaSetFromMetaDB()
 	InitOplog()
 	InitLocalIndex()
 	GapSyncLocalIndex()
-	go InitReplicaSyncThread()
 	InitReplicaSet()
+	if fullsyncMode {
+		faissdb.logger.Info("start() --fullsync: running FullLocalSync")
+		if err := FullLocalSync(); err != nil {
+			faissdb.logger.Fatal("start() --fullsync: FullLocalSync() %v", err)
+		}
+		faissdb.logger.Info("start() --fullsync: done, shutting down")
+		faissdb.idDB.Close()
+		faissdb.dataDB.Close()
+		faissdb.oplogDB.Close()
+		faissdb.replicaDB.Close()
+		faissdb.metaDB.Close()
+		os.Exit(0)
+	}
+	go InitRpcReplicaServer()
+	go InitReplicaSyncThread()
 	go InitRpcFeatureServer()
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -211,8 +229,13 @@ func start() {
 
 func main() {
 	configFile := "config.yml"
-	if len(os.Args) > 1 {
-		configFile = os.Args[1]
+	fullsyncMode := false
+	for _, arg := range os.Args[1:] {
+		if arg == "--fullsync" {
+			fullsyncMode = true
+			continue
+		}
+		configFile = arg
 	}
 	loadConfig(configFile)
 	if config.Process.Memlimit > 0 {
@@ -233,9 +256,9 @@ func main() {
 			return
 		}
 		defer context.Release()
-		start()
+		start(fullsyncMode)
 	} else {
-		start()
+		start(fullsyncMode)
 	}
 	faissdb.logger.Info("main() end")
 }

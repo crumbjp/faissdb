@@ -47,12 +47,13 @@ type Config struct {
 		HttpTimeout    int
 	}
 	Db struct {
-		Dbpath  string
-		Faiss   Faissconfig
-		Metadb  Dbconfig
-		Datadb  Dbconfig
-		Iddb    Dbconfig
-		Oplogdb Dbconfig
+		Dbpath    string
+		Faiss     Faissconfig
+		Metadb    Dbconfig
+		Datadb    Dbconfig
+		Iddb      Dbconfig
+		Oplogdb   Dbconfig
+		Replicadb Dbconfig
 	}
 	Oplog struct {
 		Term int

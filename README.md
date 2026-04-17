@@ -11,6 +11,7 @@
 -- rocksdb 10.9.1
 - [CHANGELOG](CHANGELOG.md)
 - [Configuration Reference](REFERENCE.md)
+- [Operations Runbook](OPERATIONS.md)
 
 ## About Faiss
 Faiss is one of the most advanced ANN (approximate nearest neighbor) search library.
