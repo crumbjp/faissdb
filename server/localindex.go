@@ -61,6 +61,8 @@ func (self *FaissIndex) Open(fromTrained bool) error {
 	if self.index != nil {
 		panic("Already opened")
 	}
+	// Remove any leftover .tmp from a previous crashed flush().
+	_ = os.Remove(self.IndexFilePath() + ".tmp")
 	fi, statErr := os.Stat(self.IndexFilePath())
 	indexFileExists := statErr == nil && fi.Size() > 0
 	index, err := faiss.ReadIndex(self.IndexFilePath(), faiss.IoFlagMmap)
@@ -146,8 +148,12 @@ func (self *FaissIndex) flush(path string) {
 	if self.index == nil {
 		return
 	}
-	err := faiss.WriteIndex(self.index, path)
-	if err != nil {
+	tmp := path + ".tmp"
+	if err := faiss.WriteIndexFsync(self.index, tmp); err != nil {
+		os.Remove(tmp)
+		panic(err)
+	}
+	if err := os.Rename(tmp, path); err != nil {
 		panic(err)
 	}
 }
