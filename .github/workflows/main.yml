@@ -10,13 +10,16 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # arm64 runner: matches the CI image architecture (arm64 only for now).
+    # When an amd64 CI image is also published, add a job matrix or switch
+    # back to ubuntu-latest with a multi-arch manifest.
+    runs-on: ubuntu-24.04-arm
     # CI image is pre-built locally by docker/dev.sh build_ci_container and
     # pushed to Docker Hub. Rebuild and re-push whenever server/.go-version,
     # native dependencies (RocksDB / FAISS / protoc), or Node change. See
-    # DEVELOPMENT.md "CI image" section. Pin to a sha256 digest once pushed.
+    # DEVELOPMENT.md "CI image" section.
     container:
-      image: crumbjp/faissdb:0.3.1-ci
+      image: crumbjp/faissdb@sha256:e8680e5ba777f0c4e179940adc2a3a640317884f48af1b458e91540ddd54a109
     steps:
       - uses: actions/checkout@v4
         with:
