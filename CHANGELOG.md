@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 0.3.1
+
+### New Features
+- **`--fullsync` CLI flag**: Run `faissdb <config.yml> --fullsync` to execute `FullLocalSync` at startup and exit. No gRPC or HTTP servers are started during this mode, so the node is fully isolated while rebuilding FAISS indexes from the local `dataDB`. Intended for recovering a primary whose on-disk FAISS index files were lost or corrupted (e.g. truncated by OOM during `Write`). See [OPERATIONS.md](OPERATIONS.md#primary-index-corruption-recovery).
+
+### Improvements
+- **Corrupted index detection (fail-fast)**: `FaissIndex.Open()` now distinguishes between a missing index file (legitimate bootstrap path) and an existing-but-unreadable file (corruption). In the latter case, `OpenAllIndex` now logs `Fatal` and exits instead of silently overwriting the file with the empty trained template, which previously caused the node to keep running with `Ntotal=0` while raw data remained in `dataDB`.
+
 ## 0.3.0
 
 ### New Features

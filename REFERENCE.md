@@ -1,5 +1,16 @@
 # Reference
 
+## CLI
+
+```
+faissdb [<config-file>] [--fullsync]
+```
+
+| Argument | Description |
+|---|---|
+| `<config-file>` | Path to the YAML config file. Default: `config.yml`. |
+| `--fullsync` | Run `FullLocalSync` at startup and exit. See [OPERATIONS.md](OPERATIONS.md#primary-index-corruption-recovery). No gRPC (feature / replica) or HTTP server is started in this mode; the process exits with code 0 on success, non-zero on failure. Argument order with `<config-file>` is not significant. |
+
 ## HTTP API
 
 | Method | Path | Description |

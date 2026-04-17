@@ -5,6 +5,7 @@ import (
 	"fmt"
 	pb "github.com/crumbjp/faissdb/server/grpc_replica"
 	"github.com/crumbjp/go-faiss"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -60,11 +61,20 @@ func (self *FaissIndex) Open(fromTrained bool) error {
 	if self.index != nil {
 		panic("Already opened")
 	}
+	fi, statErr := os.Stat(self.IndexFilePath())
+	indexFileExists := statErr == nil && fi.Size() > 0
 	index, err := faiss.ReadIndex(self.IndexFilePath(), faiss.IoFlagMmap)
 	if err != nil {
 		faissdb.logger.Error("FaissIndex[%s].Open() ReadIndex %v", self.name, err)
 	}
 	if index == nil {
+		if indexFileExists {
+			return errors.New(fmt.Sprintf(
+				"FaissIndex[%s].Open() index file exists (size=%d) but ReadIndex failed: corrupted; "+
+					"restart with --fullsync to rebuild from local dataDB (primary) "+
+					"or remove data directory and bootstrap as secondary: %v",
+				self.name, fi.Size(), err))
+		}
 		if !fromTrained {
 			return errors.New(fmt.Sprintf("FaissIndex[%s].Open() Not found", self.name))
 		}
@@ -293,7 +303,9 @@ func (self *LocalIndex) OpenAllIndex() error {
 		defer value.Free()
 		collection := string(value.Data())
 		indexes[collection] = newFaissIndex(collection)
-		indexes[collection].Open(true)
+		if err := indexes[collection].Open(true); err != nil {
+			faissdb.logger.Fatal("LocalIndex.OpenAllIndex() %v", err)
+		}
 	}
 	self.ReplaceIndexes(indexes)
 	return nil
