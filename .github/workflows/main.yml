@@ -11,28 +11,16 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 20
-      matrix:
-        test_script:
-          - test
-    container:
-      image: crumbjp/faissdb@sha256:9a664494d8c80317e4536d1083aa3c84cd27b09cac5b51b2355f6b4864b1f536
     steps:
-      - name: Set up a Git safe directory
-        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+      - uses: actions/checkout@v4
+        with:
+          path: faissdb
 
-      - uses: actions/checkout@v3.2.0
+      - uses: actions/checkout@v4
+        with:
+          repository: crumbjp/go-faiss
+          path: go-faiss
 
-      - name: prepare
-        run: bash ci/prepare.sh
-
-      # - name: Debug
-      #   if: ${{ always() }}
-      #   uses: mxschmitt/action-tmate@v3
-
-      - name: test_faissdb
-        run: bash ci/test_faissdb.sh
-
-      - name: test_client
-        run: bash ci/test_client.sh
+      - name: Run CI
+        working-directory: faissdb
+        run: bash ci/run.sh

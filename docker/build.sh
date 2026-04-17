@@ -16,9 +16,9 @@ set -e
 cd `dirname $0`
 
 if [ "$RETRY" != "true" ]; then
-  docker rm -f "${BUIILD_CONTAINER}"
-  docker rmi -f "${BASE_IMAGE}"
-  docker rmi -f "${BUILD_IMAGE}"
+  docker rm -f "${BUIILD_CONTAINER}" 2>/dev/null || true
+  docker rmi -f "${BASE_IMAGE}" 2>/dev/null || true
+  docker rmi -f "${BUILD_IMAGE}" 2>/dev/null || true
   rm -rf build/mnt
   cp -r mnt build/mnt
 
