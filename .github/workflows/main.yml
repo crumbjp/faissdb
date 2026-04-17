@@ -19,7 +19,7 @@ jobs:
     # native dependencies (RocksDB / FAISS / protoc), or Node change. See
     # DEVELOPMENT.md "CI image" section.
     container:
-      image: crumbjp/faissdb@sha256:e8680e5ba777f0c4e179940adc2a3a640317884f48af1b458e91540ddd54a109
+      image: crumbjp/faissdb@sha256:408b0454241495936a8afbf91034f73956654dbf138ba27d9ec782d9b406d8ae
     steps:
       - uses: actions/checkout@v4
         with:
