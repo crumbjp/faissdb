@@ -16,6 +16,7 @@ db:
     description: IVF2,PQ2x8
     metric: InnerProduct
     nprobe: 10
+    directmap: true
   metadb:
     capacity: 1073741824
   datadb:

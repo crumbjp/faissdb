@@ -18,6 +18,7 @@ type StatusResult struct {
 	Istrained bool
 	Lastsynced string
 	Lastkey string
+	DataCount int64
 	Faiss Faissconfig
 	Ntotal map[string]int64
 	ReplicaSet *ReplicaSet
@@ -35,6 +36,11 @@ type StatusResult struct {
  */
 func httpHandler(w http.ResponseWriter, r *http.Request) {
 	faissdb.logger.Info("httpHandler() %s %s", r.Method, r.URL.Path)
+	if err := beginRequest(); err != nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	defer endRequest()
 	if r.Method == http.MethodGet {
 		if r.URL.Path == "/" {
 			searchResult := StatusResult{
@@ -42,13 +48,14 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 				Faiss: config.Db.Faiss,
 				Lastsynced: 	faissdb.metaDB.GetString("lastkey"),
 				Lastkey: LastKey(),
+				DataCount: faissdb.dataDB.Count(),
 				Status: faissdb.status,
 				Ntotal: map[string]int64{},
 				ReplicaSet: faissdb.replicaSet,
 				Primary: IsPrimary(),
 				Secondary: IsSecondary(),
 			}
-			for collection, _ := range localIndex.indexes {
+			for collection := range localIndex.Indexes() {
 				searchResult.Ntotal[collection] = localIndex.Ntotal(collection)
 			}
 			resp, err := json.Marshal(searchResult)
@@ -82,6 +89,16 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			w.WriteHeader(200)
+		}
+	} else if r.Method == http.MethodDelete {
+		if r.URL.Path == "/replicaset" {
+			if err := ShutdownReplicaSet(); err != nil {
+				faissdb.logger.Info("httpHandler() ShutdownReplicaSet() %v", err)
+				w.WriteHeader(500)
+				return
+			}
+			w.WriteHeader(200)
+			return
 		}
 	} else if faissdb.status != STATUS_READY {
 		w.WriteHeader(400)

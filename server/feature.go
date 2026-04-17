@@ -150,12 +150,14 @@ func InitRpcFeatureServer() {
 		faissdb.logger.Fatal("InitRpcFeatureServer() net.Listen() %v", err)
 	}
 	server := grpc.NewServer  (
+		grpc.UnaryInterceptor(grpcRequestInterceptor()),
 		grpc.MaxSendMsgSize(2*1024*1024*1024),
 		grpc.MaxRecvMsgSize(2*1024*1024*1024),
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			MinTime: 2 * time.Second,
 			PermitWithoutStream: true,
 		}))
+	faissdb.featureServer = server
 	pb.RegisterFeatureServer(server, &RpcFeatureServer{})
 	if err := server.Serve(listen); err != nil {
 		faissdb.logger.Fatal("InitRpcFeatureServer() pb.RegisterFeatureServer() %v", err)

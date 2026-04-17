@@ -7,12 +7,15 @@ import (
 	"errors"
 	"log"
 	"encoding/json"
+	"sync"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/keepalive"
 	pb "github.com/crumbjp/faissdb/server/grpc_replica"
 	"context"
 )
+
+var ErrNeedFullSync = errors.New("need full sync")
 
 const (
 	FULLSYNC_BULKSIZE = 1000
@@ -42,36 +45,49 @@ type ReplicaMember struct {
 	Uuid string
 	rpcClientConnection grpc.ClientConnInterface
 	rpcReplicaClient pb.ReplicaClient
+	connectMutex sync.Mutex
 }
 
-func (self *ReplicaMember) Connect() {
+func (self *ReplicaMember) Connect() error {
+	self.connectMutex.Lock()
+	defer self.connectMutex.Unlock()
 	clientConn, ok := self.rpcClientConnection.(*grpc.ClientConn)
 	if ok {
 		state := clientConn.GetState()
 		if state == connectivity.Ready {
-			return
+			return nil
 		}
-		faissdb.logger.Error("ReplicaMember.Connect() State is not ready %s", state)
-		return
+		faissdb.logger.Warn("ReplicaMember.Connect() reconnect from state %s", state)
+		clientConn.Close()
+		self.rpcClientConnection = nil
+		self.rpcReplicaClient = nil
 	}
 	faissdb.logger.Info("ReplicaMember.Connect() New connection to %v => %v", self.Id, self.Host)
-	var err error
-	self.rpcClientConnection, err = grpc.Dial(
+	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
+	defer cancel()
+	clientConn, err := grpc.DialContext(
+		ctx,
 		self.Host,
 		grpc.WithMaxMsgSize(2*1024*1024*1024),
-		grpc.WithInsecure())
-	// self.rpcClientConnection, err = grpc.Dial(
-	// 	self.Host,
-	// 	grpc.WithMaxMsgSize(100*1024*1024),
-	// 	grpc.WithInsecure(),
-	// 	grpc.WithBlock())
+		grpc.WithInsecure(),
+		grpc.WithBlock(),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time: 30 * time.Second,
+			Timeout: 10 * time.Second,
+			PermitWithoutStream: true,
+		}))
 	if err != nil {
 		faissdb.logger.Error("ReplicaMember.Connect() grpc.Dial() %v", err)
+		return err
 	}
+	self.rpcClientConnection = clientConn
 	self.rpcReplicaClient = pb.NewReplicaClient(self.rpcClientConnection)
+	return nil
 }
 
 func (self *ReplicaMember) Close() {
+	self.connectMutex.Lock()
+	defer self.connectMutex.Unlock()
 	faissdb.logger.Info("ReplicaMember.Close() %v => %v", self.Id, self.Host)
 	clientConn, ok := self.rpcClientConnection.(*grpc.ClientConn)
 	if ok {
@@ -81,7 +97,26 @@ func (self *ReplicaMember) Close() {
 	}
 }
 
+func (self *ReplicaMember) ensureConnected() error {
+	clientConn, ok := self.rpcClientConnection.(*grpc.ClientConn)
+	if ok && clientConn.GetState() == connectivity.Ready && self.rpcReplicaClient != nil {
+		return nil
+	}
+	return self.Connect()
+}
+
+func (self *ReplicaMember) handleRpcError(opName string, err error) error {
+	if err != nil {
+		faissdb.logger.Error("ReplicaMember.%s %v", opName, err)
+		self.Close()
+	}
+	return err
+}
+
 func (self *ReplicaMember) beforeRequest(opName string, timeout time.Duration) (context.Context, context.CancelFunc, error) {
+	if err := self.ensureConnected(); err != nil {
+		return nil, nil, err
+	}
 	if self.rpcReplicaClient == nil {
 		return nil, nil, errors.New(fmt.Sprintf("ReplicaMember.beforeRequest() %s no client %v => %v", opName, self.Id, self.Host))
 	}
@@ -98,8 +133,7 @@ func (self *ReplicaMember) GetStatus() (*pb.GetStatusReply, error){
 	defer cancel()
 	reply, err := self.rpcReplicaClient.GetStatus(ctx, &pb.GetStatusRequest{Rsts: faissdb.rsTs})
 	if err != nil {
-		faissdb.logger.Error("ReplicaMember.GetStatus() %v", err)
-		return nil, err
+		return nil, self.handleRpcError("GetStatus()", err)
 	}
 	return reply, nil
 }
@@ -113,8 +147,7 @@ func (self *ReplicaMember) PrepareResetReplicaSet() (*pb.PrepareResetReplicaSetR
 	defer cancel()
 	reply, err := self.rpcReplicaClient.PrepareResetReplicaSet(ctx, &pb.PrepareResetReplicaSetRequest{})
 	if err != nil {
-		faissdb.logger.Error("ReplicaMember.PrepareResetReplicaSet() %v", err)
-		return nil, err
+		return nil, self.handleRpcError("PrepareResetReplicaSet()", err)
 	}
 	return reply, nil
 }
@@ -128,8 +161,7 @@ func (self *ReplicaMember) ResetReplicaSet() (*pb.ResetReplicaSetReply, error){
 	defer cancel()
 	reply, err := self.rpcReplicaClient.ResetReplicaSet(ctx, &pb.ResetReplicaSetRequest{Rsts: faissdb.rsTs, Rsjson: faissdb.rsJson})
 	if err != nil {
-		faissdb.logger.Error("ReplicaMember.ResetReplicaSet() %v", err)
-		return nil, err
+		return nil, self.handleRpcError("ResetReplicaSet()", err)
 	}
 	return reply, nil
 }
@@ -143,8 +175,7 @@ func (self *ReplicaMember) GetCurrentOplog(startKey string, length int32) (*pb.G
 	defer cancel()
 	reply, err := self.rpcReplicaClient.GetCurrentOplog(ctx, &pb.GetCurrentOplogRequest{Startkey: startKey, Length: length})
 	if err != nil {
-		faissdb.logger.Error("ReplicaMember.GetCurrentOplog() %v", err)
-		return nil, err
+		return nil, self.handleRpcError("GetCurrentOplog()", err)
 	}
 	return reply, nil
 }
@@ -158,8 +189,7 @@ func (self *ReplicaMember) GetData(startKey string, length int32) (*pb.GetDataRe
 	defer cancel()
 	reply, err := self.rpcReplicaClient.GetData(ctx, &pb.GetDataRequest{Startkey: startKey, Length: length})
 	if err != nil {
-		faissdb.logger.Error("ReplicaMember.GetData() %v", err)
-		return nil, err
+		return nil, self.handleRpcError("GetData()", err)
 	}
 	return reply, nil
 }
@@ -173,8 +203,7 @@ func (self *ReplicaMember) GetTrained() (*pb.GetTrainedReply, error){
 	defer cancel()
 	reply, err := self.rpcReplicaClient.GetTrained(ctx, &pb.GetTrainedRequest{})
 	if err != nil {
-		faissdb.logger.Error("ReplicaMember.GetTrained() %v", err)
-		return nil, err
+		return nil, self.handleRpcError("GetTrained()", err)
 	}
 	return reply, nil
 }
@@ -188,8 +217,7 @@ func (self *ReplicaMember) GetLastKey() (*pb.GetLastKeyReply, error){
 	defer cancel()
 	reply, err := self.rpcReplicaClient.GetLastKey(ctx, &pb.GetLastKeyRequest{})
 	if err != nil {
-		faissdb.logger.Error("ReplicaMember.GetLastKey() %v", err)
-		return nil, err
+		return nil, self.handleRpcError("GetLastKey()", err)
 	}
 	return reply, nil
 }
@@ -281,7 +309,21 @@ func PrepareResetReplicaSet(newPrimaryId int) error {
 	return nil
 }
 
+func ShutdownReplicaSet() error {
+	if faissdb.rsTs == 0 {
+		return errors.New("ShutdownReplicaSet() ReplicaSet is not configured")
+	}
+	if err := beginTermination(); err != nil {
+		return err
+	}
+	go shutdownProcess(true)
+	return nil
+}
+
 func ResetReplicaSet(initiative bool, rsts int64, jsonBytes []byte) error {
+	if faissdb.rsTs != 0 {
+		return errors.New("ResetReplicaSet() ReplicaSet is already configured")
+	}
 	if faissdb.rsTs < rsts {
 		var newReplicaSet ReplicaSet
 		if err := json.Unmarshal(jsonBytes, &newReplicaSet); err != nil {
@@ -418,12 +460,18 @@ func InitRpcReplicaServer() {
     log.Fatalf("InitRpcReplicaServer() %v", err)
 	}
 	server := grpc.NewServer(
+		grpc.UnaryInterceptor(grpcRequestInterceptor()),
 		grpc.MaxSendMsgSize(2*1024*1024*1024),
 		grpc.MaxRecvMsgSize(2*1024*1024*1024),
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			Time: 60 * time.Second,
+			Timeout: 10 * time.Second,
+		}),
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			MinTime: 2 * time.Second,
 			PermitWithoutStream: true,
 		}))
+	faissdb.replicaServer = server
 	pb.RegisterReplicaServer(server, &RpcReplicaServer{})
 	if err := server.Serve(listen); err != nil {
     log.Fatalf("InitRpcReplicaServer() %v", err)
@@ -479,7 +527,7 @@ func RpcReplicaGetCurrentOplog(startKey string, length int32) (*pb.GetCurrentOpl
 }
 
 func ReplicaFullSync() {
-	faissdb.logger.Info("ReplicaFullSync() start")
+	faissdb.logger.InfoMem("ReplicaFullSync() start")
 	defer faissdb.logger.Info("ReplicaFullSync() end")
 	var data []byte
 	for ;; {
@@ -499,7 +547,7 @@ func ReplicaFullSync() {
 	localIndex.ResetToTrained()
 	var masterLastKey string
 	masterLastKey, err = RpcReplicaGetLastKey()
-	faissdb.logger.Info("ReplicaFullSync() masterLastKey: %s", masterLastKey)
+	faissdb.logger.InfoMem("ReplicaFullSync() masterLastKey: %s", masterLastKey)
 	currentKey := ""
 	count := 0
 	for ;; {
@@ -517,7 +565,7 @@ func ReplicaFullSync() {
 			break
 		}
 		currentKey = reply.GetNextkey()
-		faissdb.logger.Info("ReplicaFullSync() next: %s count: %v", currentKey, count)
+		faissdb.logger.InfoMem("ReplicaFullSync() next: %s count: %v", currentKey, count)
 	}
 	PutOplogWithKey(masterLastKey, OP_SYSTEM, "", []byte("FullSync"))
 	ReplicaSync()
@@ -550,6 +598,8 @@ func ApplyOplog(oplog *Oplog) error {
 		faissdb.logger.PerformEnd("ApplyOplog DelRaw", performDelRaw)
 	} else if oplog.op == OP_DROPALL {
 		DropallRaw()
+	} else if oplog.op == OP_FULLSYNC {
+		return ErrNeedFullSync
 	} else if oplog.op == OP_SYSTEM {
 	}
 	return nil
@@ -578,6 +628,12 @@ func ReplicaSync() error {
 			performApplyOplog := faissdb.logger.PerformStart("ReplicaSync Apply")
 			err = ApplyOplog(oplog)
 			faissdb.logger.PerformEnd("ReplicaSync Apply", performApplyOplog)
+			if err == ErrNeedFullSync {
+				faissdb.logger.InfoMem("ReplicaSync() OP_FULLSYNC received, triggering ReplicaFullSync")
+				PutOplogWithKey(reply.GetKeys()[i], oplog.op, oplog.key, oplog.d)
+				ReplicaFullSync()
+				return nil
+			}
 			if err != nil {
 				return err
 			}

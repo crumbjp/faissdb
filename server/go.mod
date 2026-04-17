@@ -1,19 +1,20 @@
 module faissdb
 
-go 1.23.4
+go 1.24
 
 replace github.com/crumbjp/faissdb/server => ./
+replace github.com/crumbjp/go-faiss => ../../go-faiss
 
 require (
 	github.com/crumbjp/faissdb/server v0.0.0-20240207154259-83f6225dc708
 	github.com/crumbjp/go-faiss v0.2.0
 	github.com/google/uuid v1.6.0
-	github.com/linxGnu/grocksdb v1.9.8
+	github.com/linxGnu/grocksdb v1.10.7
 	github.com/sevlyar/go-daemon v0.1.6
-	github.com/stretchr/testify v1.10.0
-	golang.org/x/net v0.34.0
-	google.golang.org/grpc v1.69.4
-	google.golang.org/protobuf v1.36.2
+	github.com/stretchr/testify v1.11.1
+	golang.org/x/net v0.50.0
+	google.golang.org/grpc v1.72.0
+	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v2 v2.4.0
 )
 

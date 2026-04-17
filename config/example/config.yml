@@ -4,6 +4,7 @@ process:
   logfile: /usr/local/faissdb/log/faissdb.log
   pidfile: /usr/local/faissdb/tmp/faissdb.pid
   daemon: false
+  memlimit: 12884901888
 http:
   port: 9091
   maxconnections: 1000
@@ -11,11 +12,12 @@ http:
 db:
   dbpath: /usr/local/faissdb/data
   faiss:
-    dimension: 2
+    dimension: 768
     syncinterval: 60000
-    description: IVF2,PQ2_8
+    description: IVF1024,Flat
     metric: InnerProduct
-    nprobe: 10
+    nprobe: 32
+    directmap: true
   metadb:
     capacity: 1073741824
   datadb:

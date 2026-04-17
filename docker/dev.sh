@@ -9,6 +9,7 @@ function start_container {
   docker run --name="${CONTAINER_NAME}" -ti --tmpfs /run --tmpfs /run/lock --tmpfs /tmp:exec \
    -v `pwd`/build/mnt:/mnt \
    -v `pwd`/..:/mnt/faissdb \
+   -v `pwd`/../../go-faiss:/mnt/go-faiss \
    -v `pwd`/build/mnt/data:/usr/local/faissdb/data \
    -v `pwd`/build/mnt/log:/usr/local/faissdb/log \
    -v `pwd`/../nodejs/example:/usr/local/faissdb/conf \
@@ -43,6 +44,15 @@ if [ "$1" == "setup" ]; then
   fi
 fi
 
+if [ "$1" == "train" ]; then
+  PROPORTION="${2:-1}"
+  curl -v -XPOST http://localhost:9091/train -d "${PROPORTION}"
+fi
+
+if [ "$1" == "fullsync" ]; then
+  curl -v -XPOST http://localhost:9091/fullsync
+fi
+
 if [ "$1" == "stop" ]; then
   docker exec "${CONTAINER_NAME}" kill `docker exec "${CONTAINER_NAME}" cat /usr/local/faissdb/tmp/faissdb.pid`
 fi
@@ -65,9 +75,14 @@ fi
 
 if [ "$1" == "manifest" ]; then
   set -e
+  echo docker manifest create "${MANIFEST}" "${MANIFEST}-x86_64" "${MANIFEST}-arm64" --amend
   docker manifest create "${MANIFEST}" "${MANIFEST}-x86_64" "${MANIFEST}-arm64" --amend
-#  docker manifest annotate --arch amd64 "${MANIFEST}" "${MANIFEST}-x86_64"
-#  docker manifest annotate --arch arm64 "${MANIFEST}" "${MANIFEST}-arm64"
+  echo docker manifest annotate --arch amd64 "${MANIFEST}" "${MANIFEST}-x86_64"
+  docker manifest annotate --arch amd64 "${MANIFEST}" "${MANIFEST}-x86_64"
+  echo docker manifest annotate --arch arm64 "${MANIFEST}" "${MANIFEST}-arm64"
+  docker manifest annotate --arch arm64 "${MANIFEST}" "${MANIFEST}-arm64"
+  echo docker manifest inspect "${MANIFEST}"
   docker manifest inspect "${MANIFEST}"
+  echo docker manifest push ${MANIFEST}
   docker manifest push ${MANIFEST}
 fi

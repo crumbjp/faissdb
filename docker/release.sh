@@ -4,4 +4,8 @@ cd `dirname $0`
 docker rmi "${RELEASE_IMAGE}"
 set -e
 
-docker image build -t "${RELEASE_IMAGE}" .
+docker image build \
+  --build-context faissdb=.. \
+  --build-context gofaiss=../../go-faiss \
+  --provenance=false \
+  -t "${RELEASE_IMAGE}" .
