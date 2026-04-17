@@ -8,6 +8,9 @@
 ### Improvements
 - **Corrupted index detection (fail-fast)**: `FaissIndex.Open()` now distinguishes between a missing index file (legitimate bootstrap path) and an existing-but-unreadable file (corruption). In the latter case, `OpenAllIndex` now logs `Fatal` and exits instead of silently overwriting the file with the empty trained template, which previously caused the node to keep running with `Ntotal=0` while raw data remained in `dataDB`.
 
+### Bug Fixes
+- **LocalDB resource release order**: `LocalDB.DestroyDb` and `LocalDB.Close` now release RocksDB resources in reverse order of construction (WriteOptions / ReadOptions → DB → Options → BlockBasedTableOptions). The previous order destroyed `BlockBasedTableOptions` (which owns the LRU block cache) before closing the DB, leaving the block cache's native allocation unreleased after `DestroyDb`. This manifested during `FullLocalSync` as an extra ~1GB of native RSS per configured `iddb.capacity` carried into the subsequent `SyncFromLocalDb` phase, contributing to OOM on tight memory budgets.
+
 ## 0.3.0
 
 ### New Features

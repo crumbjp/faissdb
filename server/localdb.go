@@ -49,12 +49,12 @@ func (self *LocalDB) DestroyDb() {
 	defer self.rwmutex.Unlock()
 	faissdb.logger.Info("LocalDB[%s].DestroyDb() start", self.name)
 	defer faissdb.logger.Info("LocalDB[%s].DestroyDb() end", self.name)
-	self.defaultBlockBasedTableOptions.Destroy()
-	self.defaultReadOptions.Destroy()
 	self.defaultWriteOptions.Destroy()
+	self.defaultReadOptions.Destroy()
 	self.db.Close()
 	grocksdb.DestroyDb(self.name, self.defaultOptions)
 	self.defaultOptions.Destroy()
+	self.defaultBlockBasedTableOptions.Destroy()
 	self.defaultBlockBasedTableOptions = nil
 	self.defaultReadOptions = nil
 	self.defaultWriteOptions = nil
@@ -67,11 +67,11 @@ func (self *LocalDB) Close() {
 	defer self.rwmutex.Unlock()
 	faissdb.logger.Info("LocalDB[%s].Close() start", self.name)
 	defer faissdb.logger.Info("LocalDB[%s].Close() end", self.name)
-	self.defaultBlockBasedTableOptions.Destroy()
-	self.defaultReadOptions.Destroy()
 	self.defaultWriteOptions.Destroy()
+	self.defaultReadOptions.Destroy()
 	self.db.Close()
 	self.defaultOptions.Destroy()
+	self.defaultBlockBasedTableOptions.Destroy()
 	self.defaultBlockBasedTableOptions = nil
 	self.defaultReadOptions = nil
 	self.defaultWriteOptions = nil
