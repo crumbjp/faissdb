@@ -39,6 +39,7 @@ type Faissdb struct {
 	metaDB *LocalDB
 	dataDB *LocalDB
 	idDB *LocalDB
+	replicaDB *LocalDB
 	rwmutex sync.RWMutex
 	status int
 	prevStatus int
@@ -163,12 +164,13 @@ func shutdownProcess(clearReplicaSet bool) {
 		localIndex.Write()
 		faissdb.metaDB.PutString("lastkey", lastKey)
 		if clearReplicaSet {
-			faissdb.metaDB.PutInt64("ReplicaSetTs", 0)
-			faissdb.metaDB.PutString("ReplicaSet", "")
+			faissdb.replicaDB.PutInt64("ReplicaSetTs", 0)
+			faissdb.replicaDB.PutString("ReplicaSet", "")
 		}
 		faissdb.idDB.Close()
 		faissdb.dataDB.Close()
 		faissdb.oplogDB.Close()
+		faissdb.replicaDB.Close()
 		faissdb.metaDB.Close()
 		faissdb.replicaSyncMutex.Unlock()
 		faissdb.logger.Info("shutdownProcess() end")
@@ -189,6 +191,9 @@ func start(fullsyncMode bool) {
 	faissdb.dataDB.Open(&config.Db.Datadb)
 	faissdb.idDB = newLocalDB("/id")
 	faissdb.idDB.Open(&config.Db.Iddb)
+	faissdb.replicaDB = newLocalDB("/replica")
+	faissdb.replicaDB.Open(&config.Db.Replicadb)
+	migrateReplicaSetFromMetaDB()
 	InitOplog()
 	InitLocalIndex()
 	GapSyncLocalIndex()
@@ -202,6 +207,7 @@ func start(fullsyncMode bool) {
 		faissdb.idDB.Close()
 		faissdb.dataDB.Close()
 		faissdb.oplogDB.Close()
+		faissdb.replicaDB.Close()
 		faissdb.metaDB.Close()
 		os.Exit(0)
 	}

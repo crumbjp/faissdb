@@ -107,11 +107,13 @@ faissdb is configured via a YAML file passed as the first argument (default: `co
 | `directmap` | bool | Enable DirectMap (Hashtable) for IVF indexes. When enabled, FAISS maintains an ID-to-inverted-list mapping, allowing O(1) single-vector removal via `remove_ids` without a full scan. Without DirectMap, removal requires scanning all inverted lists. The Hashtable type is used (not Array) to support non-contiguous IDs. Default: `true`. |
 | `syncinterval` | int | Interval in milliseconds to periodically write FAISS indexes to disk. |
 
-### db.metadb / db.datadb / db.iddb / db.logdb
+### db.metadb / db.datadb / db.iddb / db.logdb / db.replicadb
 
 | Key | Type | Description |
 |---|---|---|
 | `capacity` | uint64 | RocksDB block cache capacity in bytes. |
+
+`db.replicadb` holds the ReplicaSet configuration (members, primary assignment, timestamp). It was split out from `metadb` in 0.3.1 so the cluster configuration can be purged independently of the vector data. On first startup after upgrade, the configuration is auto-migrated from `metadb`.
 
 ## oplog
 
@@ -161,6 +163,8 @@ db:
   iddb:
     capacity: 1073741824
   logdb:
+    capacity: 1073741824
+  replicadb:
     capacity: 1073741824
 oplog:
   term: 3600

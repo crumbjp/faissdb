@@ -103,6 +103,21 @@ rm -rf "$DBPATH"/*
 systemctl start faissdb
 ```
 
+## Purging ReplicaSet configuration
+
+When the cluster configuration gets into a bad state (e.g. inconsistent `rsTs` across nodes, wrong primary designation, orphan member entries) and you want to reset the ReplicaSet without touching the vector data or oplog, remove only `replicadb`:
+
+```sh
+systemctl stop faissdb
+DBPATH=<db.dbpath from config.yml>
+sudo rm -rf "$DBPATH"/replica
+systemctl start faissdb
+```
+
+On restart the node comes up with ReplicaSet unconfigured (`selfMember == nil`). Then re-issue `PUT /replicaset` to the intended primary to re-form the cluster. `dataDB`, `idDB`, `metaDB`, `oplogDB`, and the FAISS index files are untouched.
+
+This separation was introduced in 0.3.1; before that `ReplicaSetTs` / `ReplicaSet` were stored in `metaDB` alongside `lastkey` / collection metadata, so purging them required removing the entire data directory.
+
 ## Diagnostics
 
 ### Confirm which index file is corrupted

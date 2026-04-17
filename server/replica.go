@@ -359,8 +359,8 @@ func ResetReplicaSet(initiative bool, rsts int64, jsonBytes []byte) error {
 				return err
 			}
 		}
-		faissdb.metaDB.PutInt64("ReplicaSetTs", rsts)
-		faissdb.metaDB.PutString("ReplicaSet", string(jsonBytes))
+		faissdb.replicaDB.PutInt64("ReplicaSetTs", rsts)
+		faissdb.replicaDB.PutString("ReplicaSet", string(jsonBytes))
 		InitReplicaSet()
 	}
 	return nil
@@ -419,9 +419,28 @@ func checkReplicaSet(force bool) bool {
 	return isValid
 }
 
+// migrateReplicaSetFromMetaDB copies ReplicaSet configuration from the
+// legacy metaDB location to replicaDB (added in 0.3.1) on first startup
+// after upgrade. No-op once replicaDB already holds a value.
+func migrateReplicaSetFromMetaDB() {
+	if faissdb.replicaDB.GetInt64("ReplicaSetTs") != nil {
+		return
+	}
+	oldRsts := faissdb.metaDB.GetInt64("ReplicaSetTs")
+	oldRsJson := faissdb.metaDB.GetString("ReplicaSet")
+	if oldRsts == nil || oldRsJson == "" {
+		return
+	}
+	faissdb.logger.Info("migrateReplicaSetFromMetaDB() moving ReplicaSet config from metaDB to replicaDB")
+	faissdb.replicaDB.PutInt64("ReplicaSetTs", *oldRsts)
+	faissdb.replicaDB.PutString("ReplicaSet", oldRsJson)
+	faissdb.metaDB.Delete("ReplicaSetTs")
+	faissdb.metaDB.Delete("ReplicaSet")
+}
+
 func InitReplicaSet() {
-	rsts := faissdb.metaDB.GetInt64("ReplicaSetTs")
-	rsJson := faissdb.metaDB.GetString("ReplicaSet")
+	rsts := faissdb.replicaDB.GetInt64("ReplicaSetTs")
+	rsJson := faissdb.replicaDB.GetString("ReplicaSet")
 	if rsJson == "" {
 		return
 	}

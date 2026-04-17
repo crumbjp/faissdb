@@ -4,6 +4,7 @@
 
 ### New Features
 - **`--fullsync` CLI flag**: Run `faissdb <config.yml> --fullsync` to execute `FullLocalSync` at startup and exit. No gRPC or HTTP servers are started during this mode, so the node is fully isolated while rebuilding FAISS indexes from the local `dataDB`. Intended for recovering a primary whose on-disk FAISS index files were lost or corrupted (e.g. truncated by OOM during `Write`). See [OPERATIONS.md](OPERATIONS.md#primary-index-corruption-recovery).
+- **Separate `replicadb` for ReplicaSet configuration**: `ReplicaSetTs` / `ReplicaSet` are now stored in a dedicated RocksDB instance under `<dbpath>/replica` instead of mixed into `metaDB`. Purging the cluster configuration (e.g. recovering from a split-brain or re-forming the ReplicaSet from scratch) is now `rm -rf <dbpath>/replica` without touching vector data. Requires adding `db.replicadb.capacity` to `config.yml`. On first startup after upgrade the existing `ReplicaSetTs` / `ReplicaSet` entries are auto-migrated from `metaDB` to `replicaDB`. See [OPERATIONS.md](OPERATIONS.md#purging-replicaset-configuration).
 
 ### Improvements
 - **Corrupted index detection (fail-fast)**: `FaissIndex.Open()` now distinguishes between a missing index file (legitimate bootstrap path) and an existing-but-unreadable file (corruption). In the latter case, `OpenAllIndex` now logs `Fatal` and exits instead of silently overwriting the file with the empty trained template, which previously caused the node to keep running with `Ntotal=0` while raw data remained in `dataDB`.

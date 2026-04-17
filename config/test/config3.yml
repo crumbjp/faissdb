@@ -25,6 +25,8 @@ db:
     capacity: 1073741824
   logdb:
     capacity: 1073741824
+  replicadb:
+    capacity: 1073741824
 oplog:
   term: 600
 feature:
