@@ -1,9 +1,9 @@
-# faissdb_client_node
+# faiss-db-client
 [faissdb](https://github.com/crumbjp/faissdb) client.
 
 ## Install
 ```
-npm install faissdb_client_node
+npm install faiss-db-client
 ```
 
 ## How to use
