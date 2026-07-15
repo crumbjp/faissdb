@@ -23,28 +23,30 @@ fi
 
 cd /mnt
 
-GO_VERSION=$(cat /mnt/faissdb/server/.go-version 2>/dev/null || cat /mnt/.go-version)
-log "Installing Go ${GO_VERSION}"
+if [ "$1" != "release" ] || [ "$2" == "ci" ]; then
+  GO_VERSION=$(cat /mnt/faissdb/server/.go-version 2>/dev/null || cat /mnt/.go-version)
+  log "Installing Go ${GO_VERSION}"
 
-if [ ! -d /mnt/goenv ]; then
-  git clone https://github.com/syndbg/goenv.git /mnt/goenv
-fi
-cp -r /mnt/goenv /usr/local/
-export GOENV_ROOT=/usr/local/goenv
-export PATH=$GOENV_ROOT/bin:$PATH
-export GO111MODULE=on
-eval "$(goenv init -)"
+  if [ ! -d /mnt/goenv ]; then
+    git clone https://github.com/syndbg/goenv.git /mnt/goenv
+  fi
+  cp -r /mnt/goenv /usr/local/
+  export GOENV_ROOT=/usr/local/goenv
+  export PATH=$GOENV_ROOT/bin:$PATH
+  export GO111MODULE=on
+  eval "$(goenv init -)"
 
-echo '
+  echo '
 export GOENV_ROOT=/usr/local/goenv
 export PATH=$GOENV_ROOT/bin:$PATH
 export GO111MODULE=on
 eval "$(goenv init -)"
 ' >> /etc/profile
 
-goenv install ${GO_VERSION}
-goenv global ${GO_VERSION}
-log "Go ${GO_VERSION} installed"
+  goenv install ${GO_VERSION}
+  goenv global ${GO_VERSION}
+  log "Go ${GO_VERSION} installed"
+fi
 
 if [ "$1" != "release" ]; then
   log "Building RocksDB"
@@ -115,9 +117,16 @@ mkdir -p /usr/local/faissdb/bin /usr/local/faissdb/tmp
 
 if [ "$1" == "release" ]; then
   log "Release: copying libraries"
-  find /mnt/local/lib -mindepth 1 -maxdepth 1 ! -type d -exec cp -P {} /usr/local/lib/ \;
+  find /mnt/local/lib -mindepth 1 -maxdepth 1 ! -type d ! -name 'libbenchmark*' -exec cp -P {} /usr/local/lib/ \;
+  if command -v strip >/dev/null; then
+    log "Release: stripping libraries"
+    find /usr/local/lib -maxdepth 1 -type f -name '*.so*' -exec strip --strip-unneeded {} \;
+  fi
   ldconfig
   cp -f /mnt/faissdb-build/server/faissdb /usr/local/faissdb/bin/faissdb
+  if command -v strip >/dev/null; then
+    strip /usr/local/faissdb/bin/faissdb
+  fi
   if [ "$2" == "ci" ]; then
     cp -r /mnt/local/include/* /usr/local/include/
     cp /mnt/local/bin/* /usr/local/bin/

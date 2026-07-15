@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 0.4.0
+
+### New Features
+- **`SetCollections` API**: New Feature rpc to update collection membership of an existing key without resending the vector. The server looks up the stored record in `dataDB`, inherits its vector, and applies only the collection diff to the FAISS indexes. Unknown keys are counted as errors. nodejs client: `Client.setCollections` / `ReplicaSet.setCollections`.
+
+### Improvements
+- **Minimal FAISS dispatch on `Set`**: `Set` now compares the incoming record with the stored record in `dataDB`. If the vector is unchanged, only collections whose membership changed receive FAISS add/remove; collections the record stays in are not touched. Unchanged vector + unchanged collections performs no FAISS operation at all.
+- **Delta-carrying oplog**: `OP_SET` oplog entries now embed the removed/added collections computed by the primary (new `FaissdbRecord.delta` / `removed_collections` / `added_collections` fields). Secondary tailing and gap-sync replay apply exactly that delta when the local record matches the delta's pre-image collections, and fall back to the previous unconditional remove+add on mismatch (crash re-application against final state, divergence). Old-format oplog entries and `ReplicaFullSync` keep the previous force semantics, so rolling upgrades are safe in both directions (old nodes ignore the new fields).
+- **Release image slimmed 829MB → 175MB**: the release build no longer installs goenv + Go (previously installed unconditionally; only the CI image needs it), shared libraries and the server binary are stripped on copy (`librocksdb.so` 314MB → 11MB), RocksDB benchmark libs are excluded, and apt lists are cleaned within the single build layer.
+
 ## 0.3.1
 
 ### New Features
