@@ -587,6 +587,7 @@ func ReplicaFullSync() {
 		faissdb.logger.InfoMem("ReplicaFullSync() next: %s count: %v", currentKey, count)
 	}
 	PutOplogWithKey(masterLastKey, OP_SYSTEM, "", []byte("FullSync"))
+	localIndex.Write()
 	ReplicaSync()
 }
 

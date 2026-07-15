@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 0.4.1
+
+### Bug Fixes
+- **Graceful shutdown never flushed indexes**: on SIGTERM/SIGINT, `shutdownProcess` closes the HTTP server, which made the main goroutine's `http.Server.Serve` return `http: Server closed` and hit a `Fatal` exit *before* the shutdown path reached `localIndex.Write()` — so every shutdown was effectively an abrupt kill and the FAISS indexes were only as fresh as the last periodic sync. `InitHttpServer` now treats `http.ErrServerClosed` as normal and lets `shutdownProcess` complete (flush indexes, persist `lastkey`, close DBs, exit 0). Affected all previous versions.
+- **`ReplicaFullSync` did not flush indexes**: a freshly full-synced secondary kept its FAISS indexes only in memory until the next periodic sync (up to `syncinterval`); a crash in that window left empty on-disk indexes that gap sync cannot repair, because full-synced base data is not in the local oplog. `ReplicaFullSync` now calls `localIndex.Write()` right after the data copy.
+- **Docker image `STOPSIGNAL`**: changed from `SIGRTMIN+3` (unhandled by the server — `docker stop` killed the process abruptly) to `SIGTERM`, so `docker stop` performs a real graceful shutdown including the index flush.
+
+### Improvements
+- **Migration E2E harness (`ci/test_migration.sh`)**: verifies live 0.3.x ⇔ 0.4.x migration with the released images — in-place secondary and primary upgrades on the same data volumes (old-format oplog consumed by the new binary, gap-sync replay), mixed-version replication in both directions (delta-carrying oplog consumed by the old binary), rollback of both roles, and `SetCollections` returning `UNIMPLEMENTED` on old servers. These bugs were found by this harness. See [OPERATIONS.md](OPERATIONS.md#upgrading-03x-to-04x) for the resulting upgrade procedure.
+
 ## 0.4.0
 
 ### New Features
@@ -10,7 +20,6 @@
 - **Delta-carrying oplog**: `OP_SET` oplog entries now embed the removed/added collections computed by the primary (new `FaissdbRecord.delta` / `removed_collections` / `added_collections` fields). Secondary tailing and gap-sync replay apply exactly that delta when the local record matches the delta's pre-image collections, and fall back to the previous unconditional remove+add on mismatch (crash re-application against final state, divergence). Old-format oplog entries and `ReplicaFullSync` keep the previous force semantics, so rolling upgrades are safe in both directions (old nodes ignore the new fields).
 - **Release image rebuilt `FROM scratch`: 829MB → 56MB**: the final image contains only the runtime dependency closure — the stripped server binary (Go runtime statically linked in), stripped `libfaiss` / `libfaiss_c` / `librocksdb` (314MB → 11MB), and the shared libraries resolved transitively via `ldd` (glibc loader chain, libstdc++, libgomp, OpenBLAS + libgfortran, compression libs, gflags) plus `nsswitch.conf` and a prebuilt `ld.so.cache`. No shell, no package manager, no Go toolchain (previously goenv + a full Go install were baked in unconditionally; only the CI image needs them). The image has no shell, so `docker exec` debugging is unavailable and runtime directories must be provided as volume mounts.
 - **Release-image E2E harness (`ci/test_release.sh`)**: verifies the release image as shipped. Three cluster nodes run only the bundled binary; the full mocha suite runs in a separate CI-image driver container and connects over the network (nodes join the driver's network namespace, so the suite's localhost endpoints work unchanged). Cluster nodes are started on demand through the docker API to preserve the suite's node-join scenario. The suite's server-spawn command is now overridable via the `FAISSDB` env var.
-
 ## 0.3.1
 
 ### New Features

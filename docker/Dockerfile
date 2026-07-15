@@ -10,5 +10,5 @@ RUN --mount=type=bind,source=build/mnt,target=/mnt,rw \
 
 FROM scratch
 COPY --from=staging /out /
-STOPSIGNAL SIGRTMIN+3
+STOPSIGNAL SIGTERM
 CMD ["/usr/local/faissdb/bin/faissdb", "/usr/local/faissdb/conf/config.yml"]
