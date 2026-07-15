@@ -25,6 +25,7 @@ cd /mnt
 
 if [ "$1" != "release" ] || [ "$2" == "ci" ]; then
   GO_VERSION=$(cat /mnt/faissdb/server/.go-version 2>/dev/null || cat /mnt/.go-version)
+  echo "${GO_VERSION}" > /mnt/.go-version
   log "Installing Go ${GO_VERSION}"
 
   if [ ! -d /mnt/goenv ]; then
