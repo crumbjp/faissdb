@@ -49,6 +49,7 @@ Client API is defined in [feature.proto](/protos/feature.proto), replication pro
 |---|---|
 | `Status` | Get server status. |
 | `Set` | Upsert a vector with uniqkey and optional collection names. |
+| `SetCollections` | Update collection membership of an existing key without sending the vector. Only the changed collections are touched on the FAISS indexes. |
 | `Del` | Delete a vector by uniqkey. |
 | `Search` | Search nearest neighbors by vector. |
 | `Train` | Trigger FAISS training. |

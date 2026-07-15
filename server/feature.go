@@ -71,6 +71,27 @@ func (self *RpcFeatureServer) Set(ctx context.Context, in *pb.SetRequest) (*pb.S
 	return &pb.SetReply{Nstored: int32(nStored), Nerror: int32(nError)}, nil
 }
 
+func (self *RpcFeatureServer) SetCollections(ctx context.Context, in *pb.SetCollectionsRequest) (*pb.SetCollectionsReply, error) {
+	nStored := 0
+	nError := 0
+	if IsPrimary() {
+		if faissdb.status != STATUS_READY {
+			return nil, errors.New("RpcFeatureServer.SetCollections() Not ready")
+		}
+		for _, data := range in.GetData() {
+			faissdb.logger.Debug(" - setcollections data %v %v", data.GetKey(), data.GetCollections())
+			err := SetCollections(data.GetKey(), data.GetCollections())
+			if err != nil {
+				faissdb.logger.Error("RpcFeatureServer.SetCollections() SetCollections() %v", err)
+				nError++
+			} else {
+				nStored++
+			}
+		}
+	}
+	return &pb.SetCollectionsReply{Nstored: int32(nStored), Nerror: int32(nError)}, nil
+}
+
 func (self *RpcFeatureServer) Del(ctx context.Context, in *pb.DelRequest) (*pb.DelReply, error) {
 	if IsPrimary() {
 		if faissdb.status != STATUS_READY {

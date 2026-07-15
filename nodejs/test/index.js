@@ -504,12 +504,63 @@ describe('index', ()=> {
       });
     });
 
+    it('Update collections', () => {
+      return new Promise(async (resolve, reject) => {
+        try {
+          let collectionsUpdates = [];
+          for(let i = 0; i < N; i++){
+            if(i%18 == 0) {
+              collectionsUpdates.push({
+                key: getKey(i),
+                collections: ['main', 'i18'],
+              });
+            }
+          }
+          let [nStored, nErrors] = await this.faissdbClient.setCollections(collectionsUpdates);
+          expect(nStored).to.equals(17);
+          expect(nErrors).to.equals(0);
+          let [nStored2, nErrors2] = await this.faissdbClient.setCollections([{key: 'nokey', collections: ['main']}]);
+          expect(nStored2).to.equals(0);
+          expect(nErrors2).to.equals(1);
+          let expectedDbs = [{
+            collection: 'i15', ntotal: 7
+          }, {
+            collection: 'i18', ntotal: 17
+          }, {
+            collection: 'i3', ntotal: 26
+          }, {
+            collection: 'i9', ntotal: 17
+          }, {
+            collection: 'main', ntotal: 167
+          }];
+          let primaryDbStats = await this.faissdbClient.primary.dbstats();
+          expect(_.sortBy(primaryDbStats.dbs, 'collection')).to.deep.equals(expectedDbs);
+          while(true) {
+            let secondaryDbStats = await this.faissdbClient.secondaries[1].dbstats();
+            if(_.find(secondaryDbStats.dbs, db => db.collection == 'i18' && db.ntotal == 17)) {
+              expect(_.sortBy(secondaryDbStats.dbs, 'collection')).to.deep.equals(expectedDbs);
+              break;
+            }
+            await sleep(500);
+          }
+          let [keys, distances] = await this.faissdbClient.secondaries[1].search('i18', 30, normalize([30, 70]));
+          expect(keys.length).to.equals(17);
+          expect(_.every(keys, k => parseInt(k.slice(1)) % 18 == 0)).to.equals(true);
+          resolve();
+        } catch(e) {
+          reject(e);
+        }
+      });
+    });
+
     it('Dropall', () => {
       return new Promise(async (resolve, reject) => {
         try {
           await this.faissdbClient.dropall();
           let expectedDbs = [{
             collection: 'i15', ntotal: 0
+          }, {
+            collection: 'i18', ntotal: 0
           }, {
             collection: 'i3', ntotal: 0
           }, {

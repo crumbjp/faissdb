@@ -289,3 +289,30 @@ func TestLogic_ApplyOplogDeltaDiverged(t *testing.T) {
 	assert.Equal(t, int64(3), localIndex.Ntotal("bar"))
 	assert.Equal(t, int64(2), localIndex.Ntotal("baz"))
 }
+
+func TestLogic_SetCollections(t *testing.T) {
+	assert.Error(t, SetCollections("nokey", []string{"main"}))
+	assert.NoError(t, SetCollections("key5", []string{"main", "baz"}))
+	assert.Equal(t, int64(4), localIndex.Ntotal("main"))
+	assert.Equal(t, int64(2), localIndex.Ntotal("bar"))
+	assert.Equal(t, int64(3), localIndex.Ntotal("baz"))
+	value := faissdb.oplogDB.Get(LastKey())
+	oplog := &Oplog{}
+	assert.NoError(t, oplog.Decode(value.Data()))
+	value.Free()
+	oplogRecord := &pb.FaissdbRecord{}
+	assert.NoError(t, DecodeFaissdbRecord(oplogRecord, oplog.d))
+	assert.True(t, oplogRecord.Delta)
+	assert.Equal(t, []string{"bar"}, oplogRecord.RemovedCollections)
+	assert.Equal(t, []string{"baz"}, oplogRecord.AddedCollections)
+	assert.Equal(t, []float32{0.4,0.4}, oplogRecord.V)
+	dataValue := faissdb.dataDB.Get("key5")
+	dataRecord := &pb.FaissdbRecord{}
+	assert.NoError(t, DecodeFaissdbRecord(dataRecord, dataValue.Data()))
+	dataValue.Free()
+	assert.False(t, dataRecord.Delta)
+	assert.True(t, EqualStringSets([]string{"main", "baz"}, dataRecord.Collections))
+	assert.Equal(t, []float32{0.4,0.4}, dataRecord.V)
+	searchResults := Search("baz", []float32{0.4,0.4}, 1)
+	assert.Equal(t, "key5", searchResults[0].key)
+}

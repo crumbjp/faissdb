@@ -7,6 +7,7 @@ package feature;
 service Feature {
   rpc Status (StatusRequest) returns (StatusReply) {}
   rpc Set (SetRequest) returns (SetReply) {}
+  rpc SetCollections (SetCollectionsRequest) returns (SetCollectionsReply) {}
   rpc Del (DelRequest) returns (DelReply) {}
   rpc Search (SearchRequest) returns (SearchReply) {}
   rpc Train (TrainRequest) returns (TrainReply) {}
@@ -35,6 +36,20 @@ message SetRequest {
 }
 
 message SetReply {
+  int32 nstored = 1;
+  int32 nerror = 2;
+}
+
+message CollectionsData {
+  string key = 1;
+  repeated string collections = 2;
+}
+
+message SetCollectionsRequest {
+  repeated CollectionsData data = 1;
+}
+
+message SetCollectionsReply {
   int32 nstored = 1;
   int32 nerror = 2;
 }

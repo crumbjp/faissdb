@@ -107,6 +107,25 @@ class Client {
     return [reply.getNstored(), reply.getNerror()];
   }
 
+  /*
+   * datas: [data]
+   * data: {
+   *   key: string
+   *   collections: `[string] index names`
+   * }
+  */
+  async setCollections(inputs, options = {}) {
+    let setCollectionsRequest = new Feature.SetCollectionsRequest();
+    for(let input of inputs) {
+      let data = new Feature.CollectionsData();
+      data.setKey(input.key);
+      data.setCollectionsList(input.collections);
+      setCollectionsRequest.addData(data);
+    }
+    let reply = await this._request('setCollections', setCollectionsRequest);
+    return [reply.getNstored(), reply.getNerror()];
+  }
+
   async train(proportion, options = {}) {
     let trainRequest = new Feature.TrainRequest();
     trainRequest.setProportion(proportion);

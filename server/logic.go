@@ -92,6 +92,16 @@ func SyncRaw(key string, faissdbRecord *pb.FaissdbRecord) {
 	localIndex.Add(faissdbRecord)
 }
 
+func setWithOplogUnsafe(key string, faissdbRecord *pb.FaissdbRecord) {
+	encoded, removedCollections, addedCollections := setUnsafe(key, faissdbRecord, false)
+	deltaRecord := &pb.FaissdbRecord{Delta: true, RemovedCollections: removedCollections, AddedCollections: addedCollections}
+	encodedDelta, err := EncodeFaissdbRecord(deltaRecord)
+	if err != nil {
+		panic(err)
+	}
+	PutOplog(OP_SET, key, append(encoded, encodedDelta...))
+}
+
 func Set(key string, v []float32, collections []string) error {
 	faissdbRecord := pb.FaissdbRecord{V: v, Collections: Uniq(collections)}
 	if(len(faissdbRecord.V) != config.Db.Faiss.Dimension) {
@@ -99,13 +109,23 @@ func Set(key string, v []float32, collections []string) error {
 	}
 	faissdb.rwmutex.Lock()
 	defer faissdb.rwmutex.Unlock()
-	encoded, removedCollections, addedCollections := setUnsafe(key, &faissdbRecord, false)
-	deltaRecord := &pb.FaissdbRecord{Delta: true, RemovedCollections: removedCollections, AddedCollections: addedCollections}
-	encodedDelta, err := EncodeFaissdbRecord(deltaRecord)
-	if err != nil {
-		panic(err)
+	setWithOplogUnsafe(key, &faissdbRecord)
+	return nil
+}
+
+func SetCollections(key string, collections []string) error {
+	faissdb.rwmutex.Lock()
+	defer faissdb.rwmutex.Unlock()
+	value := faissdb.dataDB.Get(key)
+	defer value.Free()
+	valueData := value.Data()
+	if valueData == nil {
+		return errors.New(fmt.Sprintf("SetCollections() Not found: %s", key))
 	}
-	PutOplog(OP_SET, key, append(encoded, encodedDelta...))
+	currentFaissdbRecord := &pb.FaissdbRecord{}
+	DecodeFaissdbRecord(currentFaissdbRecord, valueData)
+	faissdbRecord := pb.FaissdbRecord{Id: currentFaissdbRecord.Id, V: currentFaissdbRecord.V, Collections: Uniq(collections)}
+	setWithOplogUnsafe(key, &faissdbRecord)
 	return nil
 }
 
