@@ -5,6 +5,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	pb "github.com/crumbjp/faissdb/server/grpc_replica"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -179,4 +180,45 @@ func TestLocalIndex_GapSyncLocalIndex(t *testing.T) {
 	assert.Equal(t, int64(4), localIndex.Ntotal("main"))
 	GapSyncLocalIndex()
 	assert.Equal(t, int64(3), localIndex.Ntotal("main"))
+}
+
+func TestUtil_DiffStrings(t *testing.T) {
+	assert.Equal(t, []string{"a"}, DiffStrings([]string{"a", "b"}, []string{"b", "c"}))
+	assert.Equal(t, []string{}, DiffStrings([]string{"a", "b"}, []string{"a", "b"}))
+	assert.Equal(t, []string{"a", "b"}, DiffStrings([]string{"a", "b"}, []string{}))
+	assert.Equal(t, []string{}, DiffStrings([]string{}, []string{"a"}))
+}
+
+func TestLogic_SetCollectionsDiff(t *testing.T) {
+	assert.NoError(t, Set("key5", []float32{0.3,0.3}, []string{"main", "foo"}))
+	assert.Equal(t, int64(4), localIndex.Ntotal("main"))
+	assert.Equal(t, int64(3), localIndex.Ntotal("foo"))
+	assert.NoError(t, Set("key5", []float32{0.3,0.3}, []string{"main", "baz"}))
+	assert.Equal(t, int64(4), localIndex.Ntotal("main"))
+	assert.Equal(t, int64(2), localIndex.Ntotal("foo"))
+	assert.Equal(t, int64(3), localIndex.Ntotal("baz"))
+	searchResults := Search("baz", []float32{0.3,0.3}, 1)
+	assert.Equal(t, "key5", searchResults[0].key)
+}
+
+func TestLogic_SetVectorChanged(t *testing.T) {
+	assert.NoError(t, Set("key5", []float32{0.4,0.4}, []string{"main", "baz"}))
+	assert.Equal(t, int64(4), localIndex.Ntotal("main"))
+	assert.Equal(t, int64(3), localIndex.Ntotal("baz"))
+	searchResults := Search("main", []float32{0.4,0.4}, 1)
+	assert.Equal(t, "key5", searchResults[0].key)
+}
+
+func TestLogic_SetRawForce(t *testing.T) {
+	value := faissdb.dataDB.Get("key5")
+	faissdbRecord := &pb.FaissdbRecord{}
+	assert.NoError(t, DecodeFaissdbRecord(faissdbRecord, value.Data()))
+	value.Free()
+	localIndex.RemoveRaw("main", []int64{faissdbRecord.Id})
+	assert.Equal(t, int64(3), localIndex.Ntotal("main"))
+	assert.NoError(t, Set("key5", []float32{0.4,0.4}, []string{"main", "baz"}))
+	assert.Equal(t, int64(3), localIndex.Ntotal("main"))
+	SetRaw("key5", faissdbRecord)
+	assert.Equal(t, int64(4), localIndex.Ntotal("main"))
+	assert.Equal(t, int64(3), localIndex.Ntotal("baz"))
 }

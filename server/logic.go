@@ -5,25 +5,34 @@ import (
 	"fmt"
 	"errors"
 	"math/rand"
+	"slices"
 	"container/list"
 	pb "github.com/crumbjp/faissdb/server/grpc_replica"
 )
 
 
-func setUnsafe(key string, faissdbRecord *pb.FaissdbRecord) []byte {
+func setUnsafe(key string, faissdbRecord *pb.FaissdbRecord, force bool) []byte {
 	value := faissdb.dataDB.Get(key)
 	defer value.Free()
 	valueData := value.Data()
+	removeCollections := []string{}
+	addCollections := faissdbRecord.Collections
 	if(valueData != nil) {
 		currentFaissdbRecord := &pb.FaissdbRecord{}
 		DecodeFaissdbRecord(currentFaissdbRecord, valueData)
-		for _, collection := range currentFaissdbRecord.Collections {
-			localIndex.RemoveRaw(collection, []int64{currentFaissdbRecord.Id})
-		}
 		faissdbRecord.Id = currentFaissdbRecord.Id
+		if force || !slices.Equal(currentFaissdbRecord.V, faissdbRecord.V) {
+			removeCollections = currentFaissdbRecord.Collections
+		} else {
+			removeCollections = DiffStrings(currentFaissdbRecord.Collections, faissdbRecord.Collections)
+			addCollections = DiffStrings(faissdbRecord.Collections, currentFaissdbRecord.Collections)
+		}
 	} else if faissdbRecord.Id == 0 {
 		faissdbRecord.Id = faissdb.idGenerator.Generate()
 	} else {
+	}
+	for _, collection := range removeCollections {
+		localIndex.RemoveRaw(collection, []int64{faissdbRecord.Id})
 	}
 	performEncodeFaissdbRecord := faissdb.logger.PerformStart("SetRaw EncodeFaissdbRecord")
 	encoded, err := EncodeFaissdbRecord(faissdbRecord)
@@ -38,7 +47,9 @@ func setUnsafe(key string, faissdbRecord *pb.FaissdbRecord) []byte {
 	faissdb.idDB.PutString(strconv.FormatInt(faissdbRecord.Id, 10), key)
 	faissdb.logger.PerformEnd("SetRaw idDB", performIdDB)
 	performLocalIndex := faissdb.logger.PerformStart("SetRaw localIndex")
-	localIndex.Add(faissdbRecord)
+	for _, collection := range addCollections {
+		localIndex.AddRaw(collection, faissdbRecord)
+	}
 	faissdb.logger.PerformEnd("SetRaw localIndex", performLocalIndex)
 	return encoded
 }
@@ -46,7 +57,7 @@ func setUnsafe(key string, faissdbRecord *pb.FaissdbRecord) []byte {
 func SetRaw(key string, faissdbRecord *pb.FaissdbRecord) []byte {
 	faissdb.rwmutex.Lock()
 	defer faissdb.rwmutex.Unlock()
-	return setUnsafe(key, faissdbRecord)
+	return setUnsafe(key, faissdbRecord, true)
 }
 
 func SyncRaw(key string, faissdbRecord *pb.FaissdbRecord) {
@@ -63,7 +74,7 @@ func Set(key string, v []float32, collections []string) error {
 	}
 	faissdb.rwmutex.Lock()
 	defer faissdb.rwmutex.Unlock()
-	encoded := setUnsafe(key, &faissdbRecord)
+	encoded := setUnsafe(key, &faissdbRecord, false)
 	PutOplog(OP_SET, key, encoded)
 	return nil
 }

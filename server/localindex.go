@@ -334,23 +334,27 @@ func (self *LocalIndex) Ntotal(collection string) int64 {
 	return 0
 }
 
+func (self *LocalIndex) AddRaw(collection string, faissdbRecord *pb.FaissdbRecord) {
+	indexes := self.Indexes()
+	if indexes[collection] == nil {
+		newIndexes := make(localIndexMap, len(indexes)+1)
+		for name, index := range indexes {
+			newIndexes[name] = index
+		}
+		newIndexes[collection] = newFaissIndex(collection)
+		newIndexes[collection].Open(true)
+		self.ReplaceIndexes(newIndexes)
+		indexes = newIndexes
+	}
+	err := indexes[collection].AddWithIDs(faissdbRecord.V, []int64{faissdbRecord.Id})
+	if err != nil {
+		panic(err)
+	}
+}
+
 func (self *LocalIndex) Add(faissdbRecord *pb.FaissdbRecord) {
 	for _, collection := range faissdbRecord.Collections {
-		indexes := self.Indexes()
-		if indexes[collection] == nil {
-			newIndexes := make(localIndexMap, len(indexes)+1)
-			for name, index := range indexes {
-				newIndexes[name] = index
-			}
-			newIndexes[collection] = newFaissIndex(collection)
-			newIndexes[collection].Open(true)
-			self.ReplaceIndexes(newIndexes)
-			indexes = newIndexes
-		}
-		err := indexes[collection].AddWithIDs(faissdbRecord.V, []int64{faissdbRecord.Id})
-		if err != nil {
-			panic(err)
-		}
+		self.AddRaw(collection, faissdbRecord)
 	}
 }
 

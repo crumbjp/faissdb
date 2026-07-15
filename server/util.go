@@ -142,6 +142,20 @@ func Uniq(arr []string) []string {
 	return result
 }
 
+func DiffStrings(from []string, to []string) []string {
+	toMap := make(map[string]struct{}, len(to))
+	for _, e := range to {
+		toMap[e] = struct{}{}
+	}
+	result := []string{}
+	for _, e := range from {
+		if _, ok := toMap[e]; !ok {
+			result = append(result, e)
+		}
+	}
+	return result
+}
+
 func Sha1(in []byte) string {
 	sha1Hash := sha1.New()
 	sha1Hash.Write(in)
