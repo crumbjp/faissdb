@@ -128,6 +128,23 @@ if [ "$1" == "release" ]; then
   if command -v strip >/dev/null; then
     strip /usr/local/faissdb/bin/faissdb
   fi
+  if [ "$2" == "rootfs" ]; then
+    log "Release: assembling rootfs"
+    OUT=/out
+    mkdir -p ${OUT}/usr/local/faissdb/bin ${OUT}/usr/local/faissdb/tmp ${OUT}/etc
+    cp /usr/local/faissdb/bin/faissdb ${OUT}/usr/local/faissdb/bin/
+    ldd /usr/local/faissdb/bin/faissdb \
+      | awk '$2 == "=>" && $3 ~ /^\// {print $3} $1 ~ /^\// && $1 !~ /:$/ && $2 != "=>" {print $1}' \
+      | sort -u \
+      | while read -r lib; do
+          mkdir -p "${OUT}$(dirname "$lib")"
+          cp -L "$lib" "${OUT}${lib}"
+        done
+    cp /etc/nsswitch.conf ${OUT}/etc/
+    echo '/usr/local/lib' > ${OUT}/etc/ld.so.conf
+    ldconfig -r ${OUT}
+    log "Release: rootfs done"
+  fi
   if [ "$2" == "ci" ]; then
     cp -r /mnt/local/include/* /usr/local/include/
     cp /mnt/local/bin/* /usr/local/bin/

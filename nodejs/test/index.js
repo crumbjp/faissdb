@@ -5,7 +5,7 @@ const child_process = require('child_process');
 const FaissdbReplicaSet = require("index").ReplicaSet;
 const N = 300;
 
-const FAISSDB = '../server/faissdb';
+const FAISSDB = process.env.FAISSDB || '../server/faissdb';
 const FAISSDB_CONFPATH = '../config/test';
 
 const MAIN_RESULT =  [
