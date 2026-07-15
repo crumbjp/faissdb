@@ -156,6 +156,10 @@ func DiffStrings(from []string, to []string) []string {
 	return result
 }
 
+func EqualStringSets(a []string, b []string) bool {
+	return len(DiffStrings(a, b)) == 0 && len(DiffStrings(b, a)) == 0
+}
+
 func Sha1(in []byte) string {
 	sha1Hash := sha1.New()
 	sha1Hash.Write(in)

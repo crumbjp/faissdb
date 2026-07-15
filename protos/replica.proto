@@ -83,4 +83,7 @@ message FaissdbRecord {
   int64 id = 1;
   repeated float v = 2;
   repeated string collections = 3;
+  bool delta = 4;
+  repeated string removed_collections = 5;
+  repeated string added_collections = 6;
 }
