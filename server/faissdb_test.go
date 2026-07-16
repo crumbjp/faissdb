@@ -182,11 +182,11 @@ func TestLocalIndex_GapSyncLocalIndex(t *testing.T) {
 	assert.Equal(t, int64(3), localIndex.Ntotal("main"))
 }
 
-func TestUtil_DiffStrings(t *testing.T) {
-	assert.Equal(t, []string{"a"}, DiffStrings([]string{"a", "b"}, []string{"b", "c"}))
-	assert.Equal(t, []string{}, DiffStrings([]string{"a", "b"}, []string{"a", "b"}))
-	assert.Equal(t, []string{"a", "b"}, DiffStrings([]string{"a", "b"}, []string{}))
-	assert.Equal(t, []string{}, DiffStrings([]string{}, []string{"a"}))
+func TestUtil_SubtractStrings(t *testing.T) {
+	assert.Equal(t, []string{"a"}, SubtractStrings([]string{"a", "b"}, []string{"b", "c"}))
+	assert.Equal(t, []string{}, SubtractStrings([]string{"a", "b"}, []string{"a", "b"}))
+	assert.Equal(t, []string{"a", "b"}, SubtractStrings([]string{"a", "b"}, []string{}))
+	assert.Equal(t, []string{}, SubtractStrings([]string{}, []string{"a"}))
 }
 
 func TestUtil_EqualStringSets(t *testing.T) {

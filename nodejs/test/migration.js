@@ -75,7 +75,7 @@ const countsEqual = (dbStats, expected) => {
 };
 
 // 0.3.x cannot flush its FAISS indexes on shutdown (its graceful-shutdown
-// path exits before the flush; fixed in 0.4.0), and a freshly full-synced
+// path exits before the flush; fixed in 0.4.1), and a freshly full-synced
 // secondary has nothing in its local oplog to replay the base data from.
 // Before stopping a 0.3.x node, wait until the periodic sync has persisted
 // the indexes past the current oplog position — the same step a real

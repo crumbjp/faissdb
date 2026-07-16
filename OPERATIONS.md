@@ -121,7 +121,7 @@ Verified end-to-end by [ci/test_migration.sh](ci/test_migration.sh) (build a 0.3
 
 1. **Wait for the index flush before stopping a 0.3.x node.** 0.3.x cannot flush its FAISS indexes on shutdown (its shutdown path exits before the flush; fixed in 0.4.1), so the on-disk indexes are only as fresh as the last periodic sync (`db.faiss.syncinterval`). Poll `DbStats` until `lastsynced` reaches the `lastkey` value observed after your last write. This matters most right after a full sync or `/train`, whose base data is not replayable from the local oplog.
 2. Stop the node **with SIGTERM**. Note the docker images up to 0.4.0 declare `STOPSIGNAL SIGRTMIN+3`, which the server does not handle — a plain `docker stop` kills the process abruptly. Use `docker kill -s TERM <container> && docker wait <container>` instead (images 0.4.1 and later declare SIGTERM and `docker stop` becomes safe).
-3. Start the 0.4.0 binary/image on the same data directory. Gap sync replays the oplog tail into the indexes automatically.
+3. Start the 0.4.x binary/image on the same data directory. Gap sync replays the oplog tail into the indexes automatically.
 4. Verify with `GET /` or `DbStats` (counts, `lastsynced` advancing), then move to the next node.
 5. Primary last: stopping the primary is the only write-downtime window (there is no automatic failover). Reads keep being served by secondaries.
 
@@ -129,7 +129,7 @@ If a 0.3.x node was killed abruptly right after a full sync (empty indexes but p
 
 ### Rollback
 
-0.4.0 → 0.3.x on the same data directory is supported: 0.3.x ignores the delta fields in 0.4.0-written oplog entries and force-applies them. Stop the 0.4.0 node with SIGTERM (its shutdown flush works), start the 0.3.x binary, and stop using `SetCollections` before rolling back the primary.
+0.4.x → 0.3.x on the same data directory is supported: 0.3.x ignores the delta fields in 0.4.x-written oplog entries and force-applies them. When rolling back a 0.4.1+ node, stop it with SIGTERM — its shutdown flush works. A 0.4.0 node has the same broken shutdown flush as 0.3.x, so follow step 1 (wait for `lastsynced` to catch up) before stopping it. Stop using `SetCollections` before rolling back the primary.
 
 ## Purging ReplicaSet configuration
 

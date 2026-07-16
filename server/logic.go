@@ -11,15 +11,25 @@ import (
 )
 
 
-func setUnsafe(key string, faissdbRecord *pb.FaissdbRecord, force bool) ([]byte, []string, []string) {
-	value := faissdb.dataDB.Get(key)
-	defer value.Free()
-	valueData := value.Data()
+func stripDelta(faissdbRecord *pb.FaissdbRecord) {
+	faissdbRecord.Delta = false
+	faissdbRecord.RemovedCollections = nil
+	faissdbRecord.AddedCollections = nil
+}
+
+func setUnsafe(key string, faissdbRecord *pb.FaissdbRecord, force bool, currentFaissdbRecord *pb.FaissdbRecord) ([]byte, []string, []string) {
+	if currentFaissdbRecord == nil {
+		value := faissdb.dataDB.Get(key)
+		defer value.Free()
+		valueData := value.Data()
+		if(valueData != nil) {
+			currentFaissdbRecord = &pb.FaissdbRecord{}
+			DecodeFaissdbRecord(currentFaissdbRecord, valueData)
+		}
+	}
 	currentV := []float32{}
 	currentCollections := []string{}
-	if(valueData != nil) {
-		currentFaissdbRecord := &pb.FaissdbRecord{}
-		DecodeFaissdbRecord(currentFaissdbRecord, valueData)
+	if currentFaissdbRecord != nil {
 		faissdbRecord.Id = currentFaissdbRecord.Id
 		currentV = currentFaissdbRecord.V
 		currentCollections = currentFaissdbRecord.Collections
@@ -31,22 +41,20 @@ func setUnsafe(key string, faissdbRecord *pb.FaissdbRecord, force bool) ([]byte,
 	addCollections := faissdbRecord.Collections
 	if !force {
 		if faissdbRecord.Delta {
-			previousCollections := append(DiffStrings(faissdbRecord.Collections, faissdbRecord.AddedCollections), faissdbRecord.RemovedCollections...)
+			previousCollections := append(SubtractStrings(faissdbRecord.Collections, faissdbRecord.AddedCollections), faissdbRecord.RemovedCollections...)
 			if EqualStringSets(previousCollections, currentCollections) {
 				removeCollections = faissdbRecord.RemovedCollections
 				addCollections = faissdbRecord.AddedCollections
 			}
 		} else {
 			if slices.Equal(currentV, faissdbRecord.V) {
-				removeCollections = DiffStrings(currentCollections, faissdbRecord.Collections)
-				addCollections = DiffStrings(faissdbRecord.Collections, currentCollections)
+				removeCollections = SubtractStrings(currentCollections, faissdbRecord.Collections)
+				addCollections = SubtractStrings(faissdbRecord.Collections, currentCollections)
 			}
 		}
 	}
 	if faissdbRecord.Delta {
-		faissdbRecord.Delta = false
-		faissdbRecord.RemovedCollections = nil
-		faissdbRecord.AddedCollections = nil
+		stripDelta(faissdbRecord)
 	}
 	for _, collection := range removeCollections {
 		localIndex.RemoveRaw(collection, []int64{faissdbRecord.Id})
@@ -74,14 +82,14 @@ func setUnsafe(key string, faissdbRecord *pb.FaissdbRecord, force bool) ([]byte,
 func SetRaw(key string, faissdbRecord *pb.FaissdbRecord) []byte {
 	faissdb.rwmutex.Lock()
 	defer faissdb.rwmutex.Unlock()
-	encoded, _, _ := setUnsafe(key, faissdbRecord, true)
+	encoded, _, _ := setUnsafe(key, faissdbRecord, true, nil)
 	return encoded
 }
 
 func SetDeltaRaw(key string, faissdbRecord *pb.FaissdbRecord) []byte {
 	faissdb.rwmutex.Lock()
 	defer faissdb.rwmutex.Unlock()
-	encoded, _, _ := setUnsafe(key, faissdbRecord, false)
+	encoded, _, _ := setUnsafe(key, faissdbRecord, false, nil)
 	return encoded
 }
 
@@ -92,8 +100,8 @@ func SyncRaw(key string, faissdbRecord *pb.FaissdbRecord) {
 	localIndex.Add(faissdbRecord)
 }
 
-func setWithOplogUnsafe(key string, faissdbRecord *pb.FaissdbRecord) {
-	encoded, removedCollections, addedCollections := setUnsafe(key, faissdbRecord, false)
+func setWithOplogUnsafe(key string, faissdbRecord *pb.FaissdbRecord, currentFaissdbRecord *pb.FaissdbRecord) {
+	encoded, removedCollections, addedCollections := setUnsafe(key, faissdbRecord, false, currentFaissdbRecord)
 	deltaRecord := &pb.FaissdbRecord{Delta: true, RemovedCollections: removedCollections, AddedCollections: addedCollections}
 	encodedDelta, err := EncodeFaissdbRecord(deltaRecord)
 	if err != nil {
@@ -109,7 +117,7 @@ func Set(key string, v []float32, collections []string) error {
 	}
 	faissdb.rwmutex.Lock()
 	defer faissdb.rwmutex.Unlock()
-	setWithOplogUnsafe(key, &faissdbRecord)
+	setWithOplogUnsafe(key, &faissdbRecord, nil)
 	return nil
 }
 
@@ -125,7 +133,7 @@ func SetCollections(key string, collections []string) error {
 	currentFaissdbRecord := &pb.FaissdbRecord{}
 	DecodeFaissdbRecord(currentFaissdbRecord, valueData)
 	faissdbRecord := pb.FaissdbRecord{Id: currentFaissdbRecord.Id, V: currentFaissdbRecord.V, Collections: Uniq(collections)}
-	setWithOplogUnsafe(key, &faissdbRecord)
+	setWithOplogUnsafe(key, &faissdbRecord, currentFaissdbRecord)
 	return nil
 }
 
@@ -158,6 +166,7 @@ func Del(key string) *pb.FaissdbRecord {
 		DecodeFaissdbRecord(faissdbRecord, valueData)
 		delUnsafe(key, faissdbRecord)
 		faissdbRecord.V = nil
+		stripDelta(faissdbRecord)
 		encoded, err := EncodeFaissdbRecord(faissdbRecord)
 		if err != nil {
 			panic(err)

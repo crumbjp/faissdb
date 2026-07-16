@@ -142,7 +142,7 @@ func Uniq(arr []string) []string {
 	return result
 }
 
-func DiffStrings(from []string, to []string) []string {
+func SubtractStrings(from []string, to []string) []string {
 	toMap := make(map[string]struct{}, len(to))
 	for _, e := range to {
 		toMap[e] = struct{}{}
@@ -157,7 +157,22 @@ func DiffStrings(from []string, to []string) []string {
 }
 
 func EqualStringSets(a []string, b []string) bool {
-	return len(DiffStrings(a, b)) == 0 && len(DiffStrings(b, a)) == 0
+	aMap := make(map[string]bool, len(a))
+	for _, e := range a {
+		aMap[e] = false
+	}
+	for _, e := range b {
+		if _, ok := aMap[e]; !ok {
+			return false
+		}
+		aMap[e] = true
+	}
+	for _, seen := range aMap {
+		if !seen {
+			return false
+		}
+	}
+	return true
 }
 
 func Sha1(in []byte) string {

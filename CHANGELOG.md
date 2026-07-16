@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 0.4.2
+
+### Improvements
+- **`SetCollections` no longer reads the record twice**: the handler passed only key/collections down and `setUnsafe` re-fetched and re-decoded the same record it had just read for vector inheritance. The pre-decoded record is now handed through (`setWithOplogUnsafe` / `setUnsafe` take an optional current record), halving the RocksDB read and proto decode cost of the API. All lookups stay inside the same `rwmutex` critical section.
+- **Oplog hygiene on `Del`**: a record whose dataDB bytes were written by a pre-0.4.1 binary that had applied a delta-carrying oplog entry retains stale `delta` fields (proto unknown-field passthrough). `Del` now strips them (shared `stripDelta`) before emitting `OP_DEL`, preserving the invariant that delta fields on an oplog entry always describe that entry's own operation. No consumer reads delta on `OP_DEL`, so this is preventive.
+- **Shutdown wait readability**: the HTTP goroutine now waits on a `shutdownDone` channel closed at the end of `shutdownProcess` instead of a bare `select {}`.
+- **`DiffStrings` renamed to `SubtractStrings`** (it computes the set difference from∖to); `EqualStringSets` now uses a single map pass.
+- `ci/test_release.sh` runs the suite with a 240s per-step timeout (matching `ci/test_migration.sh`) to tolerate loaded hosts.
+- OPERATIONS.md rollback note corrected: shutdown-time index flush works from 0.4.1 — a 0.4.0 node must wait for `lastsynced` like 0.3.x before being stopped.
+
 ## 0.4.1
 
 ### Bug Fixes

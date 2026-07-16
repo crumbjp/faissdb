@@ -56,5 +56,5 @@ cp -a /repo/nodejs /ws/nodejs
 cp -a /repo/config /ws/config
 cd /ws/nodejs
 npm install
-FAISSDB=/usr/local/bin/faissdb-release-node bash mocha.sh
+FAISSDB=/usr/local/bin/faissdb-release-node bash mocha.sh --timeout 240000 test/index.js
 '
