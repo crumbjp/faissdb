@@ -142,6 +142,39 @@ func Uniq(arr []string) []string {
 	return result
 }
 
+func SubtractStrings(from []string, to []string) []string {
+	toMap := make(map[string]struct{}, len(to))
+	for _, e := range to {
+		toMap[e] = struct{}{}
+	}
+	result := []string{}
+	for _, e := range from {
+		if _, ok := toMap[e]; !ok {
+			result = append(result, e)
+		}
+	}
+	return result
+}
+
+func EqualStringSets(a []string, b []string) bool {
+	aMap := make(map[string]bool, len(a))
+	for _, e := range a {
+		aMap[e] = false
+	}
+	for _, e := range b {
+		if _, ok := aMap[e]; !ok {
+			return false
+		}
+		aMap[e] = true
+	}
+	for _, seen := range aMap {
+		if !seen {
+			return false
+		}
+	}
+	return true
+}
+
 func Sha1(in []byte) string {
 	sha1Hash := sha1.New()
 	sha1Hash.Write(in)

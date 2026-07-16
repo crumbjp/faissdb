@@ -587,6 +587,7 @@ func ReplicaFullSync() {
 		faissdb.logger.InfoMem("ReplicaFullSync() next: %s count: %v", currentKey, count)
 	}
 	PutOplogWithKey(masterLastKey, OP_SYSTEM, "", []byte("FullSync"))
+	localIndex.Write()
 	ReplicaSync()
 }
 
@@ -601,7 +602,11 @@ func ApplyOplog(oplog *Oplog) error {
 			return err
 		}
 		performSetRaw := faissdb.logger.PerformStart("ApplyOplog SetRaw")
-		SetRaw(oplog.key, faissdbRecord)
+		if faissdbRecord.Delta {
+			SetDeltaRaw(oplog.key, faissdbRecord)
+		} else {
+			SetRaw(oplog.key, faissdbRecord)
+		}
 		faissdb.logger.PerformEnd("ApplyOplog SetRaw", performSetRaw)
 	} else if oplog.op == OP_DEL {
 		faissdbRecord := &pb.FaissdbRecord{}

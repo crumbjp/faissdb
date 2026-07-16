@@ -103,6 +103,34 @@ rm -rf "$DBPATH"/*
 systemctl start faissdb
 ```
 
+## Upgrading 0.3.x to 0.4.x
+
+Verified end-to-end by [ci/test_migration.sh](ci/test_migration.sh) (build a 0.3.1 cluster, upgrade the secondary then the primary in place on the same data, roll both back).
+
+### Compatibility summary
+
+| Layer | Compatibility |
+|---|---|
+| Replica protocol (gRPC) | Unchanged. Mixed clusters work in both directions: a 0.4.0 node applies old-format oplog with the pre-0.4.0 force semantics; a 0.3.x node ignores the new delta fields and force-applies. Upgrade order is free; simultaneous upgrade is NOT required. |
+| Feature protocol (clients) | Existing rpcs unchanged; old clients work against 0.4.0. `SetCollections` returns `UNIMPLEMENTED` on pre-0.4.0 servers — start using it only after every node runs 0.4.0. |
+| dataDB / idDB / metaDB / oplogDB | No format change. |
+| FAISS index / trained files | No format change (faiss 1.14.1 on both sides). |
+| oplog | 0.4.0 reads 0.3.x entries (gap replay included), and 0.3.x reads 0.4.0 delta-carrying entries (rollback safe). |
+
+### Procedure (per node, secondaries first, primary last)
+
+1. **Wait for the index flush before stopping a 0.3.x node.** 0.3.x cannot flush its FAISS indexes on shutdown (its shutdown path exits before the flush; fixed in 0.4.1), so the on-disk indexes are only as fresh as the last periodic sync (`db.faiss.syncinterval`). Poll `DbStats` until `lastsynced` reaches the `lastkey` value observed after your last write. This matters most right after a full sync or `/train`, whose base data is not replayable from the local oplog.
+2. Stop the node **with SIGTERM**. Note the docker images up to 0.4.0 declare `STOPSIGNAL SIGRTMIN+3`, which the server does not handle — a plain `docker stop` kills the process abruptly. Use `docker kill -s TERM <container> && docker wait <container>` instead (images 0.4.1 and later declare SIGTERM and `docker stop` becomes safe).
+3. Start the 0.4.x binary/image on the same data directory. Gap sync replays the oplog tail into the indexes automatically.
+4. Verify with `GET /` or `DbStats` (counts, `lastsynced` advancing), then move to the next node.
+5. Primary last: stopping the primary is the only write-downtime window (there is no automatic failover). Reads keep being served by secondaries.
+
+If a 0.3.x node was killed abruptly right after a full sync (empty indexes but populated dataDB after restart — `Ntotal` near 0 while `DataCount` is large), rebuild locally with `faissdb <config.yml> --fullsync` before serving.
+
+### Rollback
+
+0.4.x → 0.3.x on the same data directory is supported: 0.3.x ignores the delta fields in 0.4.x-written oplog entries and force-applies them. When rolling back a 0.4.1+ node, stop it with SIGTERM — its shutdown flush works. A 0.4.0 node has the same broken shutdown flush as 0.3.x, so follow step 1 (wait for `lastsynced` to catch up) before stopping it. Stop using `SetCollections` before rolling back the primary.
+
 ## Purging ReplicaSet configuration
 
 When the cluster configuration gets into a bad state (e.g. inconsistent `rsTs` across nodes, wrong primary designation, orphan member entries) and you want to reset the ReplicaSet without touching the vector data or oplog, remove only `replicadb`:

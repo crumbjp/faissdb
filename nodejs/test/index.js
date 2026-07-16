@@ -5,7 +5,7 @@ const child_process = require('child_process');
 const FaissdbReplicaSet = require("index").ReplicaSet;
 const N = 300;
 
-const FAISSDB = '../server/faissdb';
+const FAISSDB = process.env.FAISSDB || '../server/faissdb';
 const FAISSDB_CONFPATH = '../config/test';
 
 const MAIN_RESULT =  [
@@ -176,6 +176,25 @@ const cmd = async (cmd, cwd = process.cwd(), extraEnv = {}, mode = {}) => {
 const DIST_PRECISION = 2;
 const floorDist = (d) => _.floor(d, DIST_PRECISION);
 const floorResult = (rs) => _.map(rs, ([k, d]) => [k, floorDist(d)]);
+
+// Poll dbstats until the predicate holds, retrying transient failures
+// (e.g. `14 UNAVAILABLE: Connection dropped` while a node is busy applying
+// dropall/fullsync on a loaded machine). The node recovers and gRPC
+// reconnects on the next call, so a single dropped call must not fail the
+// suite. Never-satisfied predicates are bounded by the mocha timeout.
+const waitForDbstats = async (client, predicate) => {
+  while(true) {
+    try {
+      let dbStats = await client.dbstats();
+      if(predicate(dbStats)) {
+        return dbStats;
+      }
+    } catch(e) {
+      console.log(`waitForDbstats() retry: ${e}`);
+    }
+    await sleep(500);
+  }
+};
 
 describe('index', ()=> {
   describe('faissdb', ()=> {
@@ -396,14 +415,8 @@ describe('index', ()=> {
           }];
           let primaryDbStats = await this.faissdbClient.primary.dbstats();
           expect(_.sortBy(primaryDbStats.dbs, 'collection')).to.deep.equals(expectedDbs);
-          while(true) {
-            let secondaryDbStats = await this.faissdbClient.secondaries[0].dbstats();
-            if(_.find(secondaryDbStats.dbs, db => db.collection == 'main').ntotal == 150) {
-              expect(_.sortBy(secondaryDbStats.dbs, 'collection')).to.deep.equals(expectedDbs);
-              break;
-            }
-            await sleep(500);
-          }
+          let secondaryDbStats = await waitForDbstats(this.faissdbClient.secondaries[0], (dbStats) => _.find(dbStats.dbs, db => db.collection == 'main').ntotal == 150);
+          expect(_.sortBy(secondaryDbStats.dbs, 'collection')).to.deep.equals(expectedDbs);
           let isInvalid = (key) => {
             return this.delKeys.indexOf(key) >=0;
           };
@@ -437,12 +450,7 @@ describe('index', ()=> {
             }
             await sleep(500);
           }
-          while(true) {
-            let secondaryDbStats = await this.faissdbClient.secondaries[1].dbstats();
-            if(_.find(secondaryDbStats.dbs, db => db.collection == 'main').ntotal == 150) {
-              break;
-            }
-          }
+          await waitForDbstats(this.faissdbClient.secondaries[1], (dbStats) => _.find(dbStats.dbs, db => db.collection == 'main').ntotal == 150);
           resolve();
         } catch(e) {
           reject(e);
@@ -467,14 +475,8 @@ describe('index', ()=> {
           }];
           let primaryDbStats = await this.faissdbClient.primary.dbstats();
           expect(_.sortBy(primaryDbStats.dbs, 'collection')).to.deep.equals(expectedDbs);
-          while(true) {
-            let secondaryDbStats = await this.faissdbClient.secondaries[1].dbstats();
-            if(_.find(secondaryDbStats.dbs, db => db.collection == 'main').ntotal == 167) {
-              expect(_.sortBy(secondaryDbStats.dbs, 'collection')).to.deep.equals(expectedDbs);
-              break;
-            }
-            await sleep(500);
-          }
+          let secondaryDbStats = await waitForDbstats(this.faissdbClient.secondaries[1], (dbStats) => _.find(dbStats.dbs, db => db.collection == 'main').ntotal == 167);
+          expect(_.sortBy(secondaryDbStats.dbs, 'collection')).to.deep.equals(expectedDbs);
           let isMainInvalid = (key) => {
             return this.delKeys.indexOf(key) >= 0 && _.map(this.updates, r => r.key).indexOf(key) < 0;
           };
@@ -504,12 +506,57 @@ describe('index', ()=> {
       });
     });
 
+    it('Update collections', () => {
+      return new Promise(async (resolve, reject) => {
+        try {
+          let collectionsUpdates = [];
+          for(let i = 0; i < N; i++){
+            if(i%18 == 0) {
+              collectionsUpdates.push({
+                key: getKey(i),
+                collections: ['main', 'i18'],
+              });
+            }
+          }
+          let [nStored, nErrors] = await this.faissdbClient.setCollections(collectionsUpdates);
+          expect(nStored).to.equals(17);
+          expect(nErrors).to.equals(0);
+          let [nStored2, nErrors2] = await this.faissdbClient.setCollections([{key: 'nokey', collections: ['main']}]);
+          expect(nStored2).to.equals(0);
+          expect(nErrors2).to.equals(1);
+          let expectedDbs = [{
+            collection: 'i15', ntotal: 7
+          }, {
+            collection: 'i18', ntotal: 17
+          }, {
+            collection: 'i3', ntotal: 26
+          }, {
+            collection: 'i9', ntotal: 17
+          }, {
+            collection: 'main', ntotal: 167
+          }];
+          let primaryDbStats = await this.faissdbClient.primary.dbstats();
+          expect(_.sortBy(primaryDbStats.dbs, 'collection')).to.deep.equals(expectedDbs);
+          let secondaryDbStats = await waitForDbstats(this.faissdbClient.secondaries[1], (dbStats) => _.find(dbStats.dbs, db => db.collection == 'i18' && db.ntotal == 17));
+          expect(_.sortBy(secondaryDbStats.dbs, 'collection')).to.deep.equals(expectedDbs);
+          let [keys, distances] = await this.faissdbClient.secondaries[1].search('i18', 30, normalize([30, 70]));
+          expect(keys.length).to.equals(17);
+          expect(_.every(keys, k => parseInt(k.slice(1)) % 18 == 0)).to.equals(true);
+          resolve();
+        } catch(e) {
+          reject(e);
+        }
+      });
+    });
+
     it('Dropall', () => {
       return new Promise(async (resolve, reject) => {
         try {
           await this.faissdbClient.dropall();
           let expectedDbs = [{
             collection: 'i15', ntotal: 0
+          }, {
+            collection: 'i18', ntotal: 0
           }, {
             collection: 'i3', ntotal: 0
           }, {
@@ -519,14 +566,8 @@ describe('index', ()=> {
           }];
           let primaryDbStats = await this.faissdbClient.primary.dbstats();
           expect(_.sortBy(primaryDbStats.dbs, 'collection')).to.deep.equals(expectedDbs);
-          while(true) {
-            let secondaryDbStats = await this.faissdbClient.secondaries[0].dbstats();
-            if(_.find(secondaryDbStats.dbs, db => db.collection == 'main').ntotal == 0) {
-              expect(_.sortBy(secondaryDbStats.dbs, 'collection')).to.deep.equals(expectedDbs);
-              break;
-            }
-            await sleep(500);
-          }
+          let secondaryDbStats = await waitForDbstats(this.faissdbClient.secondaries[0], (dbStats) => _.find(dbStats.dbs, db => db.collection == 'main').ntotal == 0);
+          expect(_.sortBy(secondaryDbStats.dbs, 'collection')).to.deep.equals(expectedDbs);
           resolve();
         } catch(e) {
           reject(e);

@@ -60,6 +60,7 @@ type Faissdb struct {
 	replicaSyncMutex sync.Mutex
 	inflightRequests sync.WaitGroup
 	terminationOnce sync.Once
+	shutdownDone chan struct{}
 }
 var faissdb Faissdb
 
@@ -174,6 +175,7 @@ func shutdownProcess(clearReplicaSet bool) {
 		faissdb.metaDB.Close()
 		faissdb.replicaSyncMutex.Unlock()
 		faissdb.logger.Info("shutdownProcess() end")
+		close(faissdb.shutdownDone)
 		os.Exit(0)
 	})
 }
@@ -183,6 +185,7 @@ func start(fullsyncMode bool) {
 	faissdb.logger.InfoMem("start() %s", faissdb.selfUuid)
 	faissdb.rwmutex = sync.RWMutex{}
 	faissdb.replicaSyncMutex = sync.Mutex{}
+	faissdb.shutdownDone = make(chan struct{})
 	setStatus(STATUS_STARTUP)
 	faissdb.idGenerator = NewIdGenerator()
 	faissdb.metaDB = newLocalDB("/meta")

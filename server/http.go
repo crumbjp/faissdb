@@ -154,6 +154,10 @@ func InitHttpServer() {
 		WriteTimeout: time.Duration(config.Http.HttpTimeout) * time.Second,
 	}
 	if err := faissdb.httpServer.Serve(limit_listener); err != nil {
-		faissdb.logger.Fatal("InitHttpServer() Serve() %v", err)
+		if err == http.ErrServerClosed {
+			<-faissdb.shutdownDone
+		} else {
+			faissdb.logger.Fatal("InitHttpServer() Serve() %v", err)
+		}
 	}
 }

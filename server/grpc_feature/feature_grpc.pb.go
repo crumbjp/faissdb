@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 type FeatureClient interface {
 	Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusReply, error)
 	Set(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*SetReply, error)
+	SetCollections(ctx context.Context, in *SetCollectionsRequest, opts ...grpc.CallOption) (*SetCollectionsReply, error)
 	Del(ctx context.Context, in *DelRequest, opts ...grpc.CallOption) (*DelReply, error)
 	Search(ctx context.Context, in *SearchRequest, opts ...grpc.CallOption) (*SearchReply, error)
 	Train(ctx context.Context, in *TrainRequest, opts ...grpc.CallOption) (*TrainReply, error)
@@ -47,6 +48,15 @@ func (c *featureClient) Status(ctx context.Context, in *StatusRequest, opts ...g
 func (c *featureClient) Set(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*SetReply, error) {
 	out := new(SetReply)
 	err := c.cc.Invoke(ctx, "/feature.Feature/Set", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *featureClient) SetCollections(ctx context.Context, in *SetCollectionsRequest, opts ...grpc.CallOption) (*SetCollectionsReply, error) {
+	out := new(SetCollectionsReply)
+	err := c.cc.Invoke(ctx, "/feature.Feature/SetCollections", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -104,6 +114,7 @@ func (c *featureClient) DbStats(ctx context.Context, in *DbStatsRequest, opts ..
 type FeatureServer interface {
 	Status(context.Context, *StatusRequest) (*StatusReply, error)
 	Set(context.Context, *SetRequest) (*SetReply, error)
+	SetCollections(context.Context, *SetCollectionsRequest) (*SetCollectionsReply, error)
 	Del(context.Context, *DelRequest) (*DelReply, error)
 	Search(context.Context, *SearchRequest) (*SearchReply, error)
 	Train(context.Context, *TrainRequest) (*TrainReply, error)
@@ -121,6 +132,9 @@ func (UnimplementedFeatureServer) Status(context.Context, *StatusRequest) (*Stat
 }
 func (UnimplementedFeatureServer) Set(context.Context, *SetRequest) (*SetReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Set not implemented")
+}
+func (UnimplementedFeatureServer) SetCollections(context.Context, *SetCollectionsRequest) (*SetCollectionsReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetCollections not implemented")
 }
 func (UnimplementedFeatureServer) Del(context.Context, *DelRequest) (*DelReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Del not implemented")
@@ -182,6 +196,24 @@ func _Feature_Set_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(FeatureServer).Set(ctx, req.(*SetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Feature_SetCollections_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetCollectionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FeatureServer).SetCollections(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/feature.Feature/SetCollections",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FeatureServer).SetCollections(ctx, req.(*SetCollectionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -290,6 +322,10 @@ var Feature_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Set",
 			Handler:    _Feature_Set_Handler,
+		},
+		{
+			MethodName: "SetCollections",
+			Handler:    _Feature_SetCollections_Handler,
 		},
 		{
 			MethodName: "Del",

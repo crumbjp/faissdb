@@ -92,6 +92,28 @@ function deserialize_feature_SearchRequest(buffer_arg) {
   return feature_pb.SearchRequest.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
+function serialize_feature_SetCollectionsReply(arg) {
+  if (!(arg instanceof feature_pb.SetCollectionsReply)) {
+    throw new Error('Expected argument of type feature.SetCollectionsReply');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_feature_SetCollectionsReply(buffer_arg) {
+  return feature_pb.SetCollectionsReply.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_feature_SetCollectionsRequest(arg) {
+  if (!(arg instanceof feature_pb.SetCollectionsRequest)) {
+    throw new Error('Expected argument of type feature.SetCollectionsRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_feature_SetCollectionsRequest(buffer_arg) {
+  return feature_pb.SetCollectionsRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
 function serialize_feature_SetReply(arg) {
   if (!(arg instanceof feature_pb.SetReply)) {
     throw new Error('Expected argument of type feature.SetReply');
@@ -181,6 +203,17 @@ var FeatureService = exports.FeatureService = {
     requestDeserialize: deserialize_feature_SetRequest,
     responseSerialize: serialize_feature_SetReply,
     responseDeserialize: deserialize_feature_SetReply,
+  },
+  setCollections: {
+    path: '/feature.Feature/SetCollections',
+    requestStream: false,
+    responseStream: false,
+    requestType: feature_pb.SetCollectionsRequest,
+    responseType: feature_pb.SetCollectionsReply,
+    requestSerialize: serialize_feature_SetCollectionsRequest,
+    requestDeserialize: deserialize_feature_SetCollectionsRequest,
+    responseSerialize: serialize_feature_SetCollectionsReply,
+    responseDeserialize: deserialize_feature_SetCollectionsReply,
   },
   del: {
     path: '/feature.Feature/Del',

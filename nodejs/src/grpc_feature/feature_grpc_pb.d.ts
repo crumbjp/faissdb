@@ -5,12 +5,12 @@
 /* eslint-disable */
 
 import * as grpc from "@grpc/grpc-js";
-import {handleClientStreamingCall} from "@grpc/grpc-js/build/src/server-call";
 import * as feature_pb from "./feature_pb";
 
 interface IFeatureService extends grpc.ServiceDefinition<grpc.UntypedServiceImplementation> {
     status: IFeatureService_IStatus;
     set: IFeatureService_ISet;
+    setCollections: IFeatureService_ISetCollections;
     del: IFeatureService_IDel;
     search: IFeatureService_ISearch;
     train: IFeatureService_ITrain;
@@ -35,6 +35,15 @@ interface IFeatureService_ISet extends grpc.MethodDefinition<feature_pb.SetReque
     requestDeserialize: grpc.deserialize<feature_pb.SetRequest>;
     responseSerialize: grpc.serialize<feature_pb.SetReply>;
     responseDeserialize: grpc.deserialize<feature_pb.SetReply>;
+}
+interface IFeatureService_ISetCollections extends grpc.MethodDefinition<feature_pb.SetCollectionsRequest, feature_pb.SetCollectionsReply> {
+    path: "/feature.Feature/SetCollections";
+    requestStream: false;
+    responseStream: false;
+    requestSerialize: grpc.serialize<feature_pb.SetCollectionsRequest>;
+    requestDeserialize: grpc.deserialize<feature_pb.SetCollectionsRequest>;
+    responseSerialize: grpc.serialize<feature_pb.SetCollectionsReply>;
+    responseDeserialize: grpc.deserialize<feature_pb.SetCollectionsReply>;
 }
 interface IFeatureService_IDel extends grpc.MethodDefinition<feature_pb.DelRequest, feature_pb.DelReply> {
     path: "/feature.Feature/Del";
@@ -87,6 +96,7 @@ export const FeatureService: IFeatureService;
 export interface IFeatureServer extends grpc.UntypedServiceImplementation {
     status: grpc.handleUnaryCall<feature_pb.StatusRequest, feature_pb.StatusReply>;
     set: grpc.handleUnaryCall<feature_pb.SetRequest, feature_pb.SetReply>;
+    setCollections: grpc.handleUnaryCall<feature_pb.SetCollectionsRequest, feature_pb.SetCollectionsReply>;
     del: grpc.handleUnaryCall<feature_pb.DelRequest, feature_pb.DelReply>;
     search: grpc.handleUnaryCall<feature_pb.SearchRequest, feature_pb.SearchReply>;
     train: grpc.handleUnaryCall<feature_pb.TrainRequest, feature_pb.TrainReply>;
@@ -101,6 +111,9 @@ export interface IFeatureClient {
     set(request: feature_pb.SetRequest, callback: (error: grpc.ServiceError | null, response: feature_pb.SetReply) => void): grpc.ClientUnaryCall;
     set(request: feature_pb.SetRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: feature_pb.SetReply) => void): grpc.ClientUnaryCall;
     set(request: feature_pb.SetRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: feature_pb.SetReply) => void): grpc.ClientUnaryCall;
+    setCollections(request: feature_pb.SetCollectionsRequest, callback: (error: grpc.ServiceError | null, response: feature_pb.SetCollectionsReply) => void): grpc.ClientUnaryCall;
+    setCollections(request: feature_pb.SetCollectionsRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: feature_pb.SetCollectionsReply) => void): grpc.ClientUnaryCall;
+    setCollections(request: feature_pb.SetCollectionsRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: feature_pb.SetCollectionsReply) => void): grpc.ClientUnaryCall;
     del(request: feature_pb.DelRequest, callback: (error: grpc.ServiceError | null, response: feature_pb.DelReply) => void): grpc.ClientUnaryCall;
     del(request: feature_pb.DelRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: feature_pb.DelReply) => void): grpc.ClientUnaryCall;
     del(request: feature_pb.DelRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: feature_pb.DelReply) => void): grpc.ClientUnaryCall;
@@ -126,6 +139,9 @@ export class FeatureClient extends grpc.Client implements IFeatureClient {
     public set(request: feature_pb.SetRequest, callback: (error: grpc.ServiceError | null, response: feature_pb.SetReply) => void): grpc.ClientUnaryCall;
     public set(request: feature_pb.SetRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: feature_pb.SetReply) => void): grpc.ClientUnaryCall;
     public set(request: feature_pb.SetRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: feature_pb.SetReply) => void): grpc.ClientUnaryCall;
+    public setCollections(request: feature_pb.SetCollectionsRequest, callback: (error: grpc.ServiceError | null, response: feature_pb.SetCollectionsReply) => void): grpc.ClientUnaryCall;
+    public setCollections(request: feature_pb.SetCollectionsRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: feature_pb.SetCollectionsReply) => void): grpc.ClientUnaryCall;
+    public setCollections(request: feature_pb.SetCollectionsRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: feature_pb.SetCollectionsReply) => void): grpc.ClientUnaryCall;
     public del(request: feature_pb.DelRequest, callback: (error: grpc.ServiceError | null, response: feature_pb.DelReply) => void): grpc.ClientUnaryCall;
     public del(request: feature_pb.DelRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: feature_pb.DelReply) => void): grpc.ClientUnaryCall;
     public del(request: feature_pb.DelRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: feature_pb.DelReply) => void): grpc.ClientUnaryCall;

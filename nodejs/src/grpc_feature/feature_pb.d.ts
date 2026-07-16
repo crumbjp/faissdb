@@ -127,6 +127,76 @@ export namespace SetReply {
     }
 }
 
+export class CollectionsData extends jspb.Message { 
+    getKey(): string;
+    setKey(value: string): CollectionsData;
+    clearCollectionsList(): void;
+    getCollectionsList(): Array<string>;
+    setCollectionsList(value: Array<string>): CollectionsData;
+    addCollections(value: string, index?: number): string;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): CollectionsData.AsObject;
+    static toObject(includeInstance: boolean, msg: CollectionsData): CollectionsData.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: CollectionsData, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): CollectionsData;
+    static deserializeBinaryFromReader(message: CollectionsData, reader: jspb.BinaryReader): CollectionsData;
+}
+
+export namespace CollectionsData {
+    export type AsObject = {
+        key: string,
+        collectionsList: Array<string>,
+    }
+}
+
+export class SetCollectionsRequest extends jspb.Message { 
+    clearDataList(): void;
+    getDataList(): Array<CollectionsData>;
+    setDataList(value: Array<CollectionsData>): SetCollectionsRequest;
+    addData(value?: CollectionsData, index?: number): CollectionsData;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): SetCollectionsRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: SetCollectionsRequest): SetCollectionsRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: SetCollectionsRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): SetCollectionsRequest;
+    static deserializeBinaryFromReader(message: SetCollectionsRequest, reader: jspb.BinaryReader): SetCollectionsRequest;
+}
+
+export namespace SetCollectionsRequest {
+    export type AsObject = {
+        dataList: Array<CollectionsData.AsObject>,
+    }
+}
+
+export class SetCollectionsReply extends jspb.Message { 
+    getNstored(): number;
+    setNstored(value: number): SetCollectionsReply;
+    getNerror(): number;
+    setNerror(value: number): SetCollectionsReply;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): SetCollectionsReply.AsObject;
+    static toObject(includeInstance: boolean, msg: SetCollectionsReply): SetCollectionsReply.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: SetCollectionsReply, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): SetCollectionsReply;
+    static deserializeBinaryFromReader(message: SetCollectionsReply, reader: jspb.BinaryReader): SetCollectionsReply;
+}
+
+export namespace SetCollectionsReply {
+    export type AsObject = {
+        nstored: number,
+        nerror: number,
+    }
+}
+
 export class DelRequest extends jspb.Message { 
     clearKeyList(): void;
     getKeyList(): Array<string>;

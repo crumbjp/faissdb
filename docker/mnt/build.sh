@@ -23,28 +23,31 @@ fi
 
 cd /mnt
 
-GO_VERSION=$(cat /mnt/faissdb/server/.go-version 2>/dev/null || cat /mnt/.go-version)
-log "Installing Go ${GO_VERSION}"
+if [ "$1" != "release" ] || [ "$2" == "ci" ]; then
+  GO_VERSION=$(cat /mnt/faissdb/server/.go-version 2>/dev/null || cat /mnt/.go-version)
+  echo "${GO_VERSION}" > /mnt/.go-version
+  log "Installing Go ${GO_VERSION}"
 
-if [ ! -d /mnt/goenv ]; then
-  git clone https://github.com/syndbg/goenv.git /mnt/goenv
-fi
-cp -r /mnt/goenv /usr/local/
-export GOENV_ROOT=/usr/local/goenv
-export PATH=$GOENV_ROOT/bin:$PATH
-export GO111MODULE=on
-eval "$(goenv init -)"
+  if [ ! -d /mnt/goenv ]; then
+    git clone https://github.com/syndbg/goenv.git /mnt/goenv
+  fi
+  cp -r /mnt/goenv /usr/local/
+  export GOENV_ROOT=/usr/local/goenv
+  export PATH=$GOENV_ROOT/bin:$PATH
+  export GO111MODULE=on
+  eval "$(goenv init -)"
 
-echo '
+  echo '
 export GOENV_ROOT=/usr/local/goenv
 export PATH=$GOENV_ROOT/bin:$PATH
 export GO111MODULE=on
 eval "$(goenv init -)"
 ' >> /etc/profile
 
-goenv install ${GO_VERSION}
-goenv global ${GO_VERSION}
-log "Go ${GO_VERSION} installed"
+  goenv install ${GO_VERSION}
+  goenv global ${GO_VERSION}
+  log "Go ${GO_VERSION} installed"
+fi
 
 if [ "$1" != "release" ]; then
   log "Building RocksDB"
@@ -115,9 +118,33 @@ mkdir -p /usr/local/faissdb/bin /usr/local/faissdb/tmp
 
 if [ "$1" == "release" ]; then
   log "Release: copying libraries"
-  find /mnt/local/lib -mindepth 1 -maxdepth 1 ! -type d -exec cp -P {} /usr/local/lib/ \;
+  find /mnt/local/lib -mindepth 1 -maxdepth 1 ! -type d ! -name 'libbenchmark*' -exec cp -P {} /usr/local/lib/ \;
+  if command -v strip >/dev/null; then
+    log "Release: stripping libraries"
+    find /usr/local/lib -maxdepth 1 -type f -name '*.so*' -exec strip --strip-unneeded {} \;
+  fi
   ldconfig
   cp -f /mnt/faissdb-build/server/faissdb /usr/local/faissdb/bin/faissdb
+  if command -v strip >/dev/null; then
+    strip /usr/local/faissdb/bin/faissdb
+  fi
+  if [ "$2" == "rootfs" ]; then
+    log "Release: assembling rootfs"
+    OUT=/out
+    mkdir -p ${OUT}/usr/local/faissdb/bin ${OUT}/usr/local/faissdb/tmp ${OUT}/etc
+    cp /usr/local/faissdb/bin/faissdb ${OUT}/usr/local/faissdb/bin/
+    ldd /usr/local/faissdb/bin/faissdb \
+      | awk '$2 == "=>" && $3 ~ /^\// {print $3} $1 ~ /^\// && $1 !~ /:$/ && $2 != "=>" {print $1}' \
+      | sort -u \
+      | while read -r lib; do
+          mkdir -p "${OUT}$(dirname "$lib")"
+          cp -L "$lib" "${OUT}${lib}"
+        done
+    cp /etc/nsswitch.conf ${OUT}/etc/
+    echo '/usr/local/lib' > ${OUT}/etc/ld.so.conf
+    ldconfig -r ${OUT}
+    log "Release: rootfs done"
+  fi
   if [ "$2" == "ci" ]; then
     cp -r /mnt/local/include/* /usr/local/include/
     cp /mnt/local/bin/* /usr/local/bin/

@@ -77,6 +77,20 @@ class ReplicaSet {
     });
   }
 
+  setCollections(inputs, options = {}) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        await this._prepare();
+        if(!this.primary) {
+          return reject('No primary found');
+        }
+        resolve(await this.primary.setCollections(inputs, options));
+      } catch(e) {
+        reject(e);
+      }
+    });
+  }
+
   train(proportion, options = {}) {
     return new Promise(async (resolve, reject) => {
       try {

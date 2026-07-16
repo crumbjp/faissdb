@@ -14,4 +14,7 @@ mkdir -p /tmp/faissdb3/data
 
 export NODE_ENV=test
 export NODE_PATH=src
-npx mocha --config test/.mocharc.json --exit $@
+if [ $# -eq 0 ]; then
+  set -- test/index.js
+fi
+npx mocha --config test/.mocharc.json --exit "$@"
