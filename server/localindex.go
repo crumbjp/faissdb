@@ -263,6 +263,24 @@ func (self *FaissIndex) Ntotal() int64 {
 	return self.index.Ntotal()
 }
 
+func (self *FaissIndex) InvlistsMemory() *faiss.InvlistsMemory {
+	self.rwmutex.RLock()
+	defer self.rwmutex.RUnlock()
+	if self.index == nil {
+		return nil
+	}
+	indexIVF := faiss.AsIVF(self.index)
+	if indexIVF == nil {
+		return nil
+	}
+	invlistsMemory, err := indexIVF.InvlistsMemory()
+	if err != nil {
+		faissdb.logger.Warn("FaissIndex[%s].InvlistsMemory() %v", self.name, err)
+		return nil
+	}
+	return invlistsMemory
+}
+
 var localIndex *LocalIndex
 
 type localIndexMap map[string]*FaissIndex

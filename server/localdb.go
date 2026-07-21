@@ -187,3 +187,24 @@ func (self *LocalDB) Count() int64 {
 	}
 	return int64(count)
 }
+
+func (self *LocalDB) MemoryUsage() map[string]uint64 {
+	self.rwmutex.RLock()
+	defer self.rwmutex.RUnlock()
+	usage := map[string]uint64{}
+	if self.db == nil {
+		return usage
+	}
+	properties := []string{
+		"rocksdb.block-cache-usage",
+		"rocksdb.estimate-table-readers-mem",
+		"rocksdb.cur-size-all-mem-tables",
+	}
+	for _, property := range properties {
+		value, ok := self.db.GetIntProperty(property)
+		if ok {
+			usage[property] = value
+		}
+	}
+	return usage
+}

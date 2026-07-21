@@ -2,6 +2,8 @@ package main
 
 import (
 	"net"
+	"os"
+	"runtime"
 	"strconv"
 	"time"
 	"log"
@@ -24,6 +26,44 @@ type StatusResult struct {
 	ReplicaSet *ReplicaSet
 	Primary bool
 	Secondary bool
+}
+
+type IndexMemoryResult struct {
+	Ntotal int64
+	InvlistsNlist uint64
+	InvlistsUsedBytes uint64
+	InvlistsReservedBytes uint64
+	InvlistsViewBytes uint64
+}
+
+type MemoryResult struct {
+	RssBytes uint64
+	GoAllocBytes uint64
+	GoSysBytes uint64
+	Rocksdb map[string]map[string]uint64
+	Indexes map[string]*IndexMemoryResult
+}
+
+func currentRssBytes() uint64 {
+	data, err := os.ReadFile("/proc/self/statm")
+	if err != nil {
+		return 0
+	}
+	var pages uint64
+	fmt.Sscanf(string(data), "%d %d", &pages, &pages)
+	return pages * 4096
+}
+
+func writeJson(w http.ResponseWriter, result interface{}) {
+	resp, err := json.Marshal(result)
+	if err != nil {
+		faissdb.logger.Info("writeJson() json.Marshal() %v", err)
+		log.Println(err)
+		w.Write([]byte(err.Error()))
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(resp)
+	}
 }
 
 // -----------
@@ -58,15 +98,44 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 			for collection := range localIndex.Indexes() {
 				searchResult.Ntotal[collection] = localIndex.Ntotal(collection)
 			}
-			resp, err := json.Marshal(searchResult)
-			if err != nil {
-				faissdb.logger.Info("httpHandler() json.Marshal() %v", err)
-				log.Println(err)
-				w.Write([]byte(err.Error()))
-			} else {
-				w.Header().Set("Content-Type", "application/json")
-				w.Write(resp)
+			writeJson(w, searchResult)
+		} else if r.URL.Path == "/memory" {
+			var memStats runtime.MemStats
+			runtime.ReadMemStats(&memStats)
+			memoryResult := MemoryResult{
+				RssBytes: currentRssBytes(),
+				GoAllocBytes: memStats.Alloc,
+				GoSysBytes: memStats.Sys,
+				Rocksdb: map[string]map[string]uint64{
+					"meta": faissdb.metaDB.MemoryUsage(),
+					"data": faissdb.dataDB.MemoryUsage(),
+					"id": faissdb.idDB.MemoryUsage(),
+					"log": faissdb.oplogDB.MemoryUsage(),
+					"replica": faissdb.replicaDB.MemoryUsage(),
+				},
+				Indexes: map[string]*IndexMemoryResult{},
 			}
+			for collection, index := range localIndex.Indexes() {
+				indexMemoryResult := &IndexMemoryResult{Ntotal: index.Ntotal()}
+				invlistsMemory := index.InvlistsMemory()
+				if invlistsMemory != nil {
+					indexMemoryResult.InvlistsNlist = invlistsMemory.Nlist
+					indexMemoryResult.InvlistsUsedBytes = invlistsMemory.UsedBytes
+					indexMemoryResult.InvlistsReservedBytes = invlistsMemory.ReservedBytes
+					indexMemoryResult.InvlistsViewBytes = invlistsMemory.ViewBytes
+				}
+				memoryResult.Indexes[collection] = indexMemoryResult
+			}
+			writeJson(w, memoryResult)
+		} else if r.URL.Path == "/malloc_info" {
+			mallocInfo, err := MallocInfo()
+			if err != nil {
+				faissdb.logger.Info("httpHandler() MallocInfo() %v", err)
+				w.WriteHeader(500)
+				return
+			}
+			w.Header().Set("Content-Type", "application/xml")
+			w.Write([]byte(mallocInfo))
 		}
 		return
 	} else if r.Method == http.MethodPut {
@@ -141,6 +210,8 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 
 func InitHttpServer() {
 	http.HandleFunc("/", httpHandler)
+	http.HandleFunc("/memory", httpHandler)
+	http.HandleFunc("/malloc_info", httpHandler)
 	http.HandleFunc("/train", httpHandler)
 	http.HandleFunc("/ftrain", httpHandler)
 	http.HandleFunc("/fullsync", httpHandler)
