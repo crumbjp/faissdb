@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 0.4.3
+
+### Improvements
+- **Batch replies report failed input indexes**: `SetReply` / `SetCollectionsReply` gain `repeated int32 errors` (field 3) and `DelReply` gains `repeated int32 errors` (field 1), listing the 0-based request indexes that failed — dimension mismatch / bad sparse vector / store error on `Set`, unknown key on `SetCollections` and `Del`. `nstored` / `nerror` are unchanged so existing clients keep working; servers < 0.4.3 simply omit the field. nodejs client: `set` / `setCollections` now resolve to `[nStored, nErrors, errorIndexes]` and `del` resolves to the indexes of keys that did not exist.
+
 ## 0.4.2
 
 ### Improvements

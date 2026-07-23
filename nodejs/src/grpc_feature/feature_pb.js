@@ -136,7 +136,7 @@ if (goog.DEBUG && !COMPILED) {
  * @constructor
  */
 proto.feature.SetReply = function(opt_data) {
-  jspb.Message.initialize(this, opt_data, 0, -1, null, null);
+  jspb.Message.initialize(this, opt_data, 0, -1, proto.feature.SetReply.repeatedFields_, null);
 };
 goog.inherits(proto.feature.SetReply, jspb.Message);
 if (goog.DEBUG && !COMPILED) {
@@ -199,7 +199,7 @@ if (goog.DEBUG && !COMPILED) {
  * @constructor
  */
 proto.feature.SetCollectionsReply = function(opt_data) {
-  jspb.Message.initialize(this, opt_data, 0, -1, null, null);
+  jspb.Message.initialize(this, opt_data, 0, -1, proto.feature.SetCollectionsReply.repeatedFields_, null);
 };
 goog.inherits(proto.feature.SetCollectionsReply, jspb.Message);
 if (goog.DEBUG && !COMPILED) {
@@ -241,7 +241,7 @@ if (goog.DEBUG && !COMPILED) {
  * @constructor
  */
 proto.feature.DelReply = function(opt_data) {
-  jspb.Message.initialize(this, opt_data, 0, -1, null, null);
+  jspb.Message.initialize(this, opt_data, 0, -1, proto.feature.DelReply.repeatedFields_, null);
 };
 goog.inherits(proto.feature.DelReply, jspb.Message);
 if (goog.DEBUG && !COMPILED) {
@@ -1180,6 +1180,13 @@ proto.feature.SetRequest.prototype.clearDataList = function() {
 
 
 
+/**
+ * List of repeated fields within this message type.
+ * @private {!Array<number>}
+ * @const
+ */
+proto.feature.SetReply.repeatedFields_ = [3];
+
 
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
@@ -1212,7 +1219,8 @@ proto.feature.SetReply.prototype.toObject = function(opt_includeInstance) {
 proto.feature.SetReply.toObject = function(includeInstance, msg) {
   var f, obj = {
     nstored: jspb.Message.getFieldWithDefault(msg, 1, 0),
-    nerror: jspb.Message.getFieldWithDefault(msg, 2, 0)
+    nerror: jspb.Message.getFieldWithDefault(msg, 2, 0),
+    errorsList: (f = jspb.Message.getRepeatedField(msg, 3)) == null ? undefined : f
   };
 
   if (includeInstance) {
@@ -1257,6 +1265,12 @@ proto.feature.SetReply.deserializeBinaryFromReader = function(msg, reader) {
       var value = /** @type {number} */ (reader.readInt32());
       msg.setNerror(value);
       break;
+    case 3:
+      var values = /** @type {!Array<number>} */ (reader.isDelimited() ? reader.readPackedInt32() : [reader.readInt32()]);
+      for (var i = 0; i < values.length; i++) {
+        msg.addErrors(values[i]);
+      }
+      break;
     default:
       reader.skipField();
       break;
@@ -1300,6 +1314,13 @@ proto.feature.SetReply.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getErrorsList();
+  if (f.length > 0) {
+    writer.writePackedInt32(
+      3,
+      f
+    );
+  }
 };
 
 
@@ -1336,6 +1357,43 @@ proto.feature.SetReply.prototype.getNerror = function() {
  */
 proto.feature.SetReply.prototype.setNerror = function(value) {
   return jspb.Message.setProto3IntField(this, 2, value);
+};
+
+
+/**
+ * repeated int32 errors = 3;
+ * @return {!Array<number>}
+ */
+proto.feature.SetReply.prototype.getErrorsList = function() {
+  return /** @type {!Array<number>} */ (jspb.Message.getRepeatedField(this, 3));
+};
+
+
+/**
+ * @param {!Array<number>} value
+ * @return {!proto.feature.SetReply} returns this
+ */
+proto.feature.SetReply.prototype.setErrorsList = function(value) {
+  return jspb.Message.setField(this, 3, value || []);
+};
+
+
+/**
+ * @param {number} value
+ * @param {number=} opt_index
+ * @return {!proto.feature.SetReply} returns this
+ */
+proto.feature.SetReply.prototype.addErrors = function(value, opt_index) {
+  return jspb.Message.addToRepeatedField(this, 3, value, opt_index);
+};
+
+
+/**
+ * Clears the list making it empty but non-null.
+ * @return {!proto.feature.SetReply} returns this
+ */
+proto.feature.SetReply.prototype.clearErrorsList = function() {
+  return this.setErrorsList([]);
 };
 
 
@@ -1686,6 +1744,13 @@ proto.feature.SetCollectionsRequest.prototype.clearDataList = function() {
 
 
 
+/**
+ * List of repeated fields within this message type.
+ * @private {!Array<number>}
+ * @const
+ */
+proto.feature.SetCollectionsReply.repeatedFields_ = [3];
+
 
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
@@ -1718,7 +1783,8 @@ proto.feature.SetCollectionsReply.prototype.toObject = function(opt_includeInsta
 proto.feature.SetCollectionsReply.toObject = function(includeInstance, msg) {
   var f, obj = {
     nstored: jspb.Message.getFieldWithDefault(msg, 1, 0),
-    nerror: jspb.Message.getFieldWithDefault(msg, 2, 0)
+    nerror: jspb.Message.getFieldWithDefault(msg, 2, 0),
+    errorsList: (f = jspb.Message.getRepeatedField(msg, 3)) == null ? undefined : f
   };
 
   if (includeInstance) {
@@ -1763,6 +1829,12 @@ proto.feature.SetCollectionsReply.deserializeBinaryFromReader = function(msg, re
       var value = /** @type {number} */ (reader.readInt32());
       msg.setNerror(value);
       break;
+    case 3:
+      var values = /** @type {!Array<number>} */ (reader.isDelimited() ? reader.readPackedInt32() : [reader.readInt32()]);
+      for (var i = 0; i < values.length; i++) {
+        msg.addErrors(values[i]);
+      }
+      break;
     default:
       reader.skipField();
       break;
@@ -1806,6 +1878,13 @@ proto.feature.SetCollectionsReply.serializeBinaryToWriter = function(message, wr
       f
     );
   }
+  f = message.getErrorsList();
+  if (f.length > 0) {
+    writer.writePackedInt32(
+      3,
+      f
+    );
+  }
 };
 
 
@@ -1842,6 +1921,43 @@ proto.feature.SetCollectionsReply.prototype.getNerror = function() {
  */
 proto.feature.SetCollectionsReply.prototype.setNerror = function(value) {
   return jspb.Message.setProto3IntField(this, 2, value);
+};
+
+
+/**
+ * repeated int32 errors = 3;
+ * @return {!Array<number>}
+ */
+proto.feature.SetCollectionsReply.prototype.getErrorsList = function() {
+  return /** @type {!Array<number>} */ (jspb.Message.getRepeatedField(this, 3));
+};
+
+
+/**
+ * @param {!Array<number>} value
+ * @return {!proto.feature.SetCollectionsReply} returns this
+ */
+proto.feature.SetCollectionsReply.prototype.setErrorsList = function(value) {
+  return jspb.Message.setField(this, 3, value || []);
+};
+
+
+/**
+ * @param {number} value
+ * @param {number=} opt_index
+ * @return {!proto.feature.SetCollectionsReply} returns this
+ */
+proto.feature.SetCollectionsReply.prototype.addErrors = function(value, opt_index) {
+  return jspb.Message.addToRepeatedField(this, 3, value, opt_index);
+};
+
+
+/**
+ * Clears the list making it empty but non-null.
+ * @return {!proto.feature.SetCollectionsReply} returns this
+ */
+proto.feature.SetCollectionsReply.prototype.clearErrorsList = function() {
+  return this.setErrorsList([]);
 };
 
 
@@ -2002,6 +2118,13 @@ proto.feature.DelRequest.prototype.clearKeyList = function() {
 
 
 
+/**
+ * List of repeated fields within this message type.
+ * @private {!Array<number>}
+ * @const
+ */
+proto.feature.DelReply.repeatedFields_ = [1];
+
 
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
@@ -2033,7 +2156,7 @@ proto.feature.DelReply.prototype.toObject = function(opt_includeInstance) {
  */
 proto.feature.DelReply.toObject = function(includeInstance, msg) {
   var f, obj = {
-
+    errorsList: (f = jspb.Message.getRepeatedField(msg, 1)) == null ? undefined : f
   };
 
   if (includeInstance) {
@@ -2070,6 +2193,12 @@ proto.feature.DelReply.deserializeBinaryFromReader = function(msg, reader) {
     }
     var field = reader.getFieldNumber();
     switch (field) {
+    case 1:
+      var values = /** @type {!Array<number>} */ (reader.isDelimited() ? reader.readPackedInt32() : [reader.readInt32()]);
+      for (var i = 0; i < values.length; i++) {
+        msg.addErrors(values[i]);
+      }
+      break;
     default:
       reader.skipField();
       break;
@@ -2099,6 +2228,50 @@ proto.feature.DelReply.prototype.serializeBinary = function() {
  */
 proto.feature.DelReply.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
+  f = message.getErrorsList();
+  if (f.length > 0) {
+    writer.writePackedInt32(
+      1,
+      f
+    );
+  }
+};
+
+
+/**
+ * repeated int32 errors = 1;
+ * @return {!Array<number>}
+ */
+proto.feature.DelReply.prototype.getErrorsList = function() {
+  return /** @type {!Array<number>} */ (jspb.Message.getRepeatedField(this, 1));
+};
+
+
+/**
+ * @param {!Array<number>} value
+ * @return {!proto.feature.DelReply} returns this
+ */
+proto.feature.DelReply.prototype.setErrorsList = function(value) {
+  return jspb.Message.setField(this, 1, value || []);
+};
+
+
+/**
+ * @param {number} value
+ * @param {number=} opt_index
+ * @return {!proto.feature.DelReply} returns this
+ */
+proto.feature.DelReply.prototype.addErrors = function(value, opt_index) {
+  return jspb.Message.addToRepeatedField(this, 1, value, opt_index);
+};
+
+
+/**
+ * Clears the list making it empty but non-null.
+ * @return {!proto.feature.DelReply} returns this
+ */
+proto.feature.DelReply.prototype.clearErrorsList = function() {
+  return this.setErrorsList([]);
 };
 
 

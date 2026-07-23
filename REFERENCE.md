@@ -56,6 +56,8 @@ Client API is defined in [feature.proto](/protos/feature.proto), replication pro
 | `Dropall` | Drop all data. |
 | `DbStats` | Get RocksDB statistics. |
 
+`Set` / `SetCollections` / `Del` replies carry `errors`: the 0-based indexes of the request entries that failed (invalid vector, unknown key). Servers < 0.4.3 omit the field.
+
 ### Replica Service (internal)
 
 | RPC | Description |

@@ -104,7 +104,7 @@ class Client {
       setRequest.addData(data);
     }
     let reply = await this._request('set', setRequest);
-    return [reply.getNstored(), reply.getNerror()];
+    return [reply.getNstored(), reply.getNerror(), reply.getErrorsList()];
   }
 
   /*
@@ -123,7 +123,7 @@ class Client {
       setCollectionsRequest.addData(data);
     }
     let reply = await this._request('setCollections', setCollectionsRequest);
-    return [reply.getNstored(), reply.getNerror()];
+    return [reply.getNstored(), reply.getNerror(), reply.getErrorsList()];
   }
 
   async train(proportion, options = {}) {
@@ -136,7 +136,8 @@ class Client {
   async del(keys, options = {}) {
     let delRequest = new Feature.DelRequest();
     delRequest.setKeyList(keys);
-    await this._request('del', delRequest);
+    let reply = await this._request('del', delRequest);
+    return reply.getErrorsList();
   }
 
   /*
