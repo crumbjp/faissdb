@@ -2,6 +2,9 @@
 
 ## 0.4.3
 
+### Breaking changes
+- **FAISS index files moved under `<dbpath>/indexes/`**: per-collection index files and `faiss_trained` were previously written directly into `<dbpath>` next to the RocksDB directories. The server creates `<dbpath>/indexes/` on startup; there is no automatic migration — move the files manually with `mv` while the node is stopped (see [OPERATIONS.md](OPERATIONS.md#upgrading-to-043-index-files-move-under-dbpathindexes), rollback is the reverse `mv`). Startup fails with a clear `Fatal` when legacy index files remain directly under `<dbpath>`, so a forgotten move cannot silently serve empty indexes. `ci/test_migration.sh` performs the move on every version switch.
+
 ### Improvements
 - **Batch replies report failed input indexes**: `SetReply` / `SetCollectionsReply` gain `repeated int32 errors` (field 3) and `DelReply` gains `repeated int32 errors` (field 1), listing the 0-based request indexes that failed — dimension mismatch / bad sparse vector / store error on `Set`, unknown key on `SetCollections` and `Del`. `nstored` / `nerror` are unchanged so existing clients keep working; servers < 0.4.3 simply omit the field. nodejs client: `set` / `setCollections` now resolve to `[nStored, nErrors, errorIndexes]` and `del` resolves to the indexes of keys that did not exist.
 

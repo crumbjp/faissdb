@@ -97,7 +97,7 @@ faissdb is configured via a YAML file passed as the first argument (default: `co
 
 | Key | Type | Description |
 |---|---|---|
-| `dbpath` | string | Base directory for all data files (RocksDB, FAISS indexes). |
+| `dbpath` | string | Base directory for all data files. RocksDB databases are subdirectories; FAISS index files (one per collection, plus `faiss_trained`) live under `<dbpath>/indexes/` (directly under `<dbpath>` before 0.4.3). |
 
 ### db.faiss
 

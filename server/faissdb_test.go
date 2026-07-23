@@ -23,6 +23,7 @@ func TestMain(m *testing.M) {
 	faissdb.idGenerator = NewIdGenerator()
 	faissdb.rwmutex = sync.RWMutex{}
 	setStatus(STATUS_STARTUP)
+	os.MkdirAll(IndexesDirPath(), 0755)
 	faissdb.metaDB = newLocalDB("/meta")
 	faissdb.metaDB.Open(&config.Db.Metadb)
 	faissdb.dataDB = newLocalDB("/data")
@@ -69,7 +70,7 @@ func TestLocaldb_Open(t *testing.T) {
 }
 
 func TestFaissIndex_IndexFilePath(t *testing.T) {
-	assert.Equal(t, faissIndex.IndexFilePath(), config.Db.Dbpath + "/" + TEST_FAISS_INDEX_NAME)
+	assert.Equal(t, faissIndex.IndexFilePath(), config.Db.Dbpath + "/indexes/" + TEST_FAISS_INDEX_NAME)
 }
 
 func TestFaissIndex_OpenNew(t *testing.T) {
