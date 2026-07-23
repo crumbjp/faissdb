@@ -288,7 +288,7 @@ func dropallUnsafe() {
 	faissdb.idDB.DestroyDb()
 	faissdb.idDB.Open(&config.Db.Iddb)
 	faissdb.dataDB.DestroyDb()
-	faissdb.dataDB.Open(&config.Db.Iddb)
+	faissdb.dataDB.Open(&config.Db.Datadb)
 }
 
 func DropallRaw() {
