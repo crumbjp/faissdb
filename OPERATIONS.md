@@ -20,7 +20,7 @@ FAISS index files are written to disk periodically (`db.faiss.syncinterval`). If
 
 ### Recovery procedure (primary)
 
-Prerequisite: the `dataDB` (RocksDB) is intact and contains all records. This is the normal case — corruption affects only the FAISS index files under `<dbpath>/<collection>`.
+Prerequisite: the `dataDB` (RocksDB) is intact and contains all records. This is the normal case — corruption affects only the FAISS index files under `<dbpath>/indexes/<collection>` (directly under `<dbpath>` before 0.5.0).
 
 0. **Snapshot the current state**
    ```sh
@@ -114,14 +114,14 @@ Verified end-to-end by [ci/test_migration.sh](ci/test_migration.sh) (build a 0.3
 | Replica protocol (gRPC) | Unchanged. Mixed clusters work in both directions: a 0.4.0 node applies old-format oplog with the pre-0.4.0 force semantics; a 0.3.x node ignores the new delta fields and force-applies. Upgrade order is free; simultaneous upgrade is NOT required. |
 | Feature protocol (clients) | Existing rpcs unchanged; old clients work against 0.4.0. `SetCollections` returns `UNIMPLEMENTED` on pre-0.4.0 servers — start using it only after every node runs 0.4.0. |
 | dataDB / idDB / metaDB / oplogDB | No format change. |
-| FAISS index / trained files | No format change (faiss 1.14.1 on both sides). |
+| FAISS index / trained files | No format change (faiss 1.14.1 on both sides). From 0.5.0 the files live under `<dbpath>/indexes/` — see [Upgrading to 0.5.0](#upgrading-to-050-index-files-move-under-dbpathindexes). |
 | oplog | 0.4.0 reads 0.3.x entries (gap replay included), and 0.3.x reads 0.4.0 delta-carrying entries (rollback safe). |
 
 ### Procedure (per node, secondaries first, primary last)
 
 1. **Wait for the index flush before stopping a 0.3.x node.** 0.3.x cannot flush its FAISS indexes on shutdown (its shutdown path exits before the flush; fixed in 0.4.1), so the on-disk indexes are only as fresh as the last periodic sync (`db.faiss.syncinterval`). Poll `DbStats` until `lastsynced` reaches the `lastkey` value observed after your last write. This matters most right after a full sync or `/train`, whose base data is not replayable from the local oplog.
 2. Stop the node **with SIGTERM**. Note the docker images up to 0.4.0 declare `STOPSIGNAL SIGRTMIN+3`, which the server does not handle — a plain `docker stop` kills the process abruptly. Use `docker kill -s TERM <container> && docker wait <container>` instead (images 0.4.1 and later declare SIGTERM and `docker stop` becomes safe).
-3. Start the 0.4.x binary/image on the same data directory. Gap sync replays the oplog tail into the indexes automatically.
+3. Start the 0.4.x binary/image on the same data directory. Gap sync replays the oplog tail into the indexes automatically. If the target version is 0.5.0 or later, move the index files while the node is stopped — see [Upgrading to 0.5.0](#upgrading-to-050-index-files-move-under-dbpathindexes).
 4. Verify with `GET /` or `DbStats` (counts, `lastsynced` advancing), then move to the next node.
 5. Primary last: stopping the primary is the only write-downtime window (there is no automatic failover). Reads keep being served by secondaries.
 
@@ -129,7 +129,29 @@ If a 0.3.x node was killed abruptly right after a full sync (empty indexes but p
 
 ### Rollback
 
-0.4.x → 0.3.x on the same data directory is supported: 0.3.x ignores the delta fields in 0.4.x-written oplog entries and force-applies them. When rolling back a 0.4.1+ node, stop it with SIGTERM — its shutdown flush works. A 0.4.0 node has the same broken shutdown flush as 0.3.x, so follow step 1 (wait for `lastsynced` to catch up) before stopping it. Stop using `SetCollections` before rolling back the primary.
+0.4.x → 0.3.x on the same data directory is supported: 0.3.x ignores the delta fields in 0.4.x-written oplog entries and force-applies them. When rolling back a 0.4.1+ node, stop it with SIGTERM — its shutdown flush works. A 0.4.0 node has the same broken shutdown flush as 0.3.x, so follow step 1 (wait for `lastsynced` to catch up) before stopping it. Stop using `SetCollections` before rolling back the primary. When rolling back from 0.5.0 or later, also move the index files back — see below.
+
+## Upgrading to 0.5.0 (index files move under `<dbpath>/indexes/`)
+
+From 0.5.0 the FAISS index files (one per collection, plus `faiss_trained`) live under `<dbpath>/indexes/` instead of directly under `<dbpath>`. There is no automatic migration: move the files manually, per node, while the node is stopped. The server creates `<dbpath>/indexes/` on startup and refuses to start (clear `Fatal` in the log) as long as legacy index files remain directly under `<dbpath>`, so a forgotten move fails loudly instead of serving empty indexes.
+
+Per node, after stopping it (respect the flush rules of the version you are stopping — see the 0.3.x procedure above):
+
+```sh
+DBPATH=<db.dbpath from config.yml>
+mkdir -p "$DBPATH/indexes"
+find "$DBPATH" -maxdepth 1 -type f -exec mv {} "$DBPATH/indexes/" \;
+```
+
+The only regular files directly under `<dbpath>` are index files (the RocksDB databases are directories), so the `find` moves exactly the right set, including any leftover `.tmp` from a crashed flush.
+
+Rollback to a pre-0.5.0 version is the reverse move, again while the node is stopped:
+
+```sh
+find "$DBPATH/indexes" -maxdepth 1 -type f -exec mv {} "$DBPATH/" \;
+```
+
+Both directions are verified by [ci/test_migration.sh](ci/test_migration.sh).
 
 ## Purging ReplicaSet configuration
 
@@ -153,8 +175,8 @@ This separation was introduced in 0.3.1; before that `ReplicaSetTs` / `ReplicaSe
 Compare file sizes on primary vs. secondary:
 
 ```sh
-ls -la "$DBPATH"/{main,recent,season,faiss_trained}
-stat "$DBPATH/main"
+ls -la "$DBPATH"/indexes/{main,recent,season,faiss_trained}
+stat "$DBPATH/indexes/main"
 ```
 
 A primary-side index file that is dramatically smaller than the secondary's equivalent is a strong corruption signal.

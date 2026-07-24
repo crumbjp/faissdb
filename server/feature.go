@@ -32,19 +32,19 @@ func (self *RpcFeatureServer) Status(ctx context.Context, in *pb.StatusRequest) 
 
 func (self *RpcFeatureServer) Set(ctx context.Context, in *pb.SetRequest) (*pb.SetReply, error) {
 	nStored := 0
-	nError := 0
+	errorIndexes := []int32{}
 	if IsPrimary() {
 		if faissdb.status != STATUS_READY {
 			return nil, errors.New("RpcFeatureServer.Set() Not ready")
 		}
 		var err error
-		for _, data := range in.GetData() {
+		for index, data := range in.GetData() {
 			v := make([]float32, config.Db.Faiss.Dimension)
 			if(data.GetV() != nil) {
 				dataV := data.GetV()
 				if (len(dataV) != config.Db.Faiss.Dimension) {
 					faissdb.logger.Error("RpcFeatureServer.Set() GetV() length missmatch %v != %v", len(dataV), config.Db.Faiss.Dimension)
-					nError++
+					errorIndexes = append(errorIndexes, int32(index))
 					continue
 				}
 				for i, double := range dataV {
@@ -54,7 +54,7 @@ func (self *RpcFeatureServer) Set(ctx context.Context, in *pb.SetRequest) (*pb.S
 				err := parseSparseV(v, data.GetSparsev())
 				if err != nil {
 					faissdb.logger.Error("RpcFeatureServer.Set() parseSparseV() %v", err)
-					nError++
+					errorIndexes = append(errorIndexes, int32(index))
 					continue
 				}
 			}
@@ -62,47 +62,50 @@ func (self *RpcFeatureServer) Set(ctx context.Context, in *pb.SetRequest) (*pb.S
 			err = Set(data.GetKey(), v, data.GetCollections())
 			if err != nil {
 				faissdb.logger.Error("RpcFeatureServer.Set() Set() %v", err)
-				nError++
+				errorIndexes = append(errorIndexes, int32(index))
 			} else {
 				nStored++
 			}
 		}
 	}
-	return &pb.SetReply{Nstored: int32(nStored), Nerror: int32(nError)}, nil
+	return &pb.SetReply{Nstored: int32(nStored), Nerror: int32(len(errorIndexes)), Errors: errorIndexes}, nil
 }
 
 func (self *RpcFeatureServer) SetCollections(ctx context.Context, in *pb.SetCollectionsRequest) (*pb.SetCollectionsReply, error) {
 	nStored := 0
-	nError := 0
+	errorIndexes := []int32{}
 	if IsPrimary() {
 		if faissdb.status != STATUS_READY {
 			return nil, errors.New("RpcFeatureServer.SetCollections() Not ready")
 		}
-		for _, data := range in.GetData() {
+		for index, data := range in.GetData() {
 			faissdb.logger.Debug(" - setcollections data %v %v", data.GetKey(), data.GetCollections())
 			err := SetCollections(data.GetKey(), data.GetCollections())
 			if err != nil {
 				faissdb.logger.Error("RpcFeatureServer.SetCollections() SetCollections() %v", err)
-				nError++
+				errorIndexes = append(errorIndexes, int32(index))
 			} else {
 				nStored++
 			}
 		}
 	}
-	return &pb.SetCollectionsReply{Nstored: int32(nStored), Nerror: int32(nError)}, nil
+	return &pb.SetCollectionsReply{Nstored: int32(nStored), Nerror: int32(len(errorIndexes)), Errors: errorIndexes}, nil
 }
 
 func (self *RpcFeatureServer) Del(ctx context.Context, in *pb.DelRequest) (*pb.DelReply, error) {
+	errorIndexes := []int32{}
 	if IsPrimary() {
 		if faissdb.status != STATUS_READY {
 			return nil, errors.New("RpcFeatureServer.Del() Not ready")
 		}
-		for _, key := range in.GetKey() {
+		for index, key := range in.GetKey() {
 			faissdb.logger.Debug(" - del data %v", key)
-			Del(key)
+			if Del(key) == nil {
+				errorIndexes = append(errorIndexes, int32(index))
+			}
 		}
 	}
-	return &pb.DelReply{}, nil
+	return &pb.DelReply{Errors: errorIndexes}, nil
 }
 
 func (self *RpcFeatureServer) Train(ctx context.Context, in *pb.TrainRequest) (*pb.TrainReply, error) {

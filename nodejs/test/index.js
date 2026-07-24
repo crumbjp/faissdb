@@ -310,9 +310,10 @@ describe('index', ()=> {
     it('Put first data', () => {
       return new Promise(async (resolve, reject) => {
         try {
-          let [nStored, nErrors] = await this.faissdbClient.set(this.inputs);
+          let [nStored, nErrors, errors] = await this.faissdbClient.set(this.inputs);
           expect(nStored).to.equals(N);
           expect(nErrors).to.equals(0);
+          expect(errors).to.deep.equals([]);
           let primaryDbStats = await this.faissdbClient.primary.dbstats();
           expect(_.sortBy(primaryDbStats.dbs, 'collection')).to.deep.equals([{
             collection: 'i15', ntotal: 0
@@ -405,7 +406,10 @@ describe('index', ()=> {
     it('Delete', () => {
       return new Promise(async (resolve, reject) => {
         try {
-          await this.faissdbClient.del(this.delKeys);
+          let delErrors = await this.faissdbClient.del(this.delKeys.slice(1));
+          expect(delErrors).to.deep.equals([]);
+          let delErrors2 = await this.faissdbClient.del(['nokey', this.delKeys[0]]);
+          expect(delErrors2).to.deep.equals([0]);
           let expectedDbs = [{
             collection: 'i15', ntotal: 10
           }, {
@@ -518,12 +522,14 @@ describe('index', ()=> {
               });
             }
           }
-          let [nStored, nErrors] = await this.faissdbClient.setCollections(collectionsUpdates);
+          let [nStored, nErrors, errors] = await this.faissdbClient.setCollections(collectionsUpdates);
           expect(nStored).to.equals(17);
           expect(nErrors).to.equals(0);
-          let [nStored2, nErrors2] = await this.faissdbClient.setCollections([{key: 'nokey', collections: ['main']}]);
-          expect(nStored2).to.equals(0);
+          expect(errors).to.deep.equals([]);
+          let [nStored2, nErrors2, errors2] = await this.faissdbClient.setCollections([{key: getKey(0), collections: ['main', 'i18']}, {key: 'nokey', collections: ['main']}]);
+          expect(nStored2).to.equals(1);
           expect(nErrors2).to.equals(1);
+          expect(errors2).to.deep.equals([1]);
           let expectedDbs = [{
             collection: 'i15', ntotal: 7
           }, {

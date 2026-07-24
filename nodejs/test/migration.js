@@ -37,6 +37,16 @@ const stopNode = async (name) => {
   }
 };
 
+// faissdb >= 0.5.0 keeps index files under <dbpath>/indexes/; the documented
+// migration is a manual mv while the node is stopped. ci/test_migration.sh
+// mounts the data volumes on this driver at /mig<n>-data.
+const upgradeIndexLayout = (n) => {
+  child_process.execSync(`mkdir -p /mig${n}-data/indexes && find /mig${n}-data -maxdepth 1 -type f -exec mv {} /mig${n}-data/indexes/ \\;`);
+};
+const rollbackIndexLayout = (n) => {
+  child_process.execSync(`find /mig${n}-data/indexes -maxdepth 1 -type f -exec mv {} /mig${n}-data/ \\;`);
+};
+
 const NODE1_OLD = 'faissdb-mig-node1-old';
 const NODE1_NEW = 'faissdb-mig-node1-new';
 const NODE2_OLD = 'faissdb-mig-node2-old';
@@ -174,6 +184,7 @@ describe('migration', ()=> {
         try {
           await waitFlushed(this.node2);
           await stopNode(NODE2_OLD);
+          upgradeIndexLayout(2);
           startNode(NODE2_NEW);
           await waitReady(this.node2);
           await this.waitCluster(this.expectedCounts);
@@ -211,6 +222,7 @@ describe('migration', ()=> {
         try {
           await waitFlushed(this.node1);
           await stopNode(NODE1_OLD);
+          upgradeIndexLayout(1);
           startNode(NODE1_NEW);
           await waitReady(this.node1);
           await this.waitCluster(this.expectedCounts);
@@ -244,6 +256,7 @@ describe('migration', ()=> {
       return new Promise(async (resolve, reject) => {
         try {
           await stopNode(NODE2_NEW);
+          rollbackIndexLayout(2);
           startNode(NODE2_OLD);
           await waitReady(this.node2);
           await this.waitCluster(this.expectedCounts);
@@ -269,6 +282,7 @@ describe('migration', ()=> {
       return new Promise(async (resolve, reject) => {
         try {
           await stopNode(NODE1_NEW);
+          rollbackIndexLayout(1);
           startNode(NODE1_OLD);
           await waitReady(this.node1);
           await this.waitCluster(this.expectedCounts);

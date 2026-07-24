@@ -34,7 +34,7 @@ func newFaissIndex(name string) *FaissIndex {
 }
 
 func (self *FaissIndex) IndexFilePath() string {
-	return config.Db.Dbpath + "/" + self.name
+	return IndexesDirPath() + "/" + self.name
 }
 
 func (self *FaissIndex) OpenNew() {
@@ -326,6 +326,9 @@ func (self *LocalIndex) OpenAllIndex() error {
 		value := it.Value()
 		defer value.Free()
 		collection := string(value.Data())
+		if IsFile(config.Db.Dbpath + "/" + collection) {
+			faissdb.logger.Fatal("LocalIndex.OpenAllIndex() legacy index file %s/%s: move it into %s (see OPERATIONS.md)", config.Db.Dbpath, collection, IndexesDirPath())
+		}
 		indexes[collection] = newFaissIndex(collection)
 		if err := indexes[collection].Open(true); err != nil {
 			faissdb.logger.Fatal("LocalIndex.OpenAllIndex() %v", err)
@@ -504,8 +507,12 @@ func (self *LocalIndex) Search(collection string, vector []float32, n int64) ([]
 	return nil, nil
 }
 
+func IndexesDirPath() string {
+	return config.Db.Dbpath + "/indexes"
+}
+
 func TrainedFilePath() string {
-	return config.Db.Dbpath + FAISS_TRAINED
+	return IndexesDirPath() + FAISS_TRAINED
 }
 
 func syncLocalIndexThread() {
@@ -519,6 +526,12 @@ func syncLocalIndexThread() {
 }
 
 func InitLocalIndex() {
+	if err := os.MkdirAll(IndexesDirPath(), 0755); err != nil {
+		faissdb.logger.Fatal("InitLocalIndex() os.MkdirAll(%s) %v", IndexesDirPath(), err)
+	}
+	if IsFile(config.Db.Dbpath + FAISS_TRAINED) {
+		faissdb.logger.Fatal("InitLocalIndex() legacy index files under %s: move faiss_trained and collection index files into %s (see OPERATIONS.md)", config.Db.Dbpath, IndexesDirPath())
+	}
 	initLocalIndex()
 	localIndex.OpenAllIndex()
 	go syncLocalIndexThread()

@@ -40,6 +40,8 @@ fi
 docker run -d --name "${DRIVER}" --tmpfs /tmp:exec \
   -v "${REPO}:/repo:ro" \
   -v /var/run/docker.sock:/var/run/docker.sock \
+  -v "faissdb-mig1-data:/mig1-data" \
+  -v "faissdb-mig2-data:/mig2-data" \
   "${CI_IMAGE}" sleep infinity
 
 for n in 1 2; do

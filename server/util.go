@@ -16,6 +16,11 @@ func StatFile(path string) bool {
 	return err == nil
 }
 
+func IsFile(path string) bool {
+	fi, err := os.Stat(path)
+	return err == nil && fi.Mode().IsRegular()
+}
+
 func ReadFile(path string) ([]byte, error) {
 	file, err := os.Open(path)
 	if err != nil {

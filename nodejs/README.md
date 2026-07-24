@@ -23,7 +23,7 @@ const client = new ReplicaSet({
 client.init();
 
 // Upsert vectors (writes go to the primary automatically)
-await client.set([
+const [nStored, nErrors, errorIndexes] = await client.set([
   { key: 'k1', v: [0.1, 0.2], collections: ['main', 'sub'] },
 ]);
 
@@ -35,11 +35,13 @@ await client.setCollections([
 // Search a collection (reads are balanced to secondaries)
 const [keys, distances] = await client.search('main', 10, [0.1, 0.2]);
 
-// Delete
+// Delete (resolves to the indexes of keys that did not exist)
 await client.del(['k1']);
 ```
 
 Sparse vectors are also accepted: pass `v` as an object of `{ index: value }` instead of an array.
+
+`set` and `setCollections` resolve to `[nStored, nErrors, errorIndexes]` where `errorIndexes` lists the 0-based positions of the inputs that failed (faissdb >= 0.5.0; older servers report an empty list).
 
 Other operations: `train(proportion)`, `dropall()`, `dbstats()`, `status()`. A single-node `Client` class is exported as well.
 

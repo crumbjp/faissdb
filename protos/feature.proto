@@ -38,6 +38,7 @@ message SetRequest {
 message SetReply {
   int32 nstored = 1;
   int32 nerror = 2;
+  repeated int32 errors = 3;
 }
 
 message CollectionsData {
@@ -52,6 +53,7 @@ message SetCollectionsRequest {
 message SetCollectionsReply {
   int32 nstored = 1;
   int32 nerror = 2;
+  repeated int32 errors = 3;
 }
 
 message DelRequest {
@@ -59,6 +61,7 @@ message DelRequest {
 }
 
 message DelReply {
+  repeated int32 errors = 1;
 }
 
 message SearchRequest {

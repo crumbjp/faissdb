@@ -109,6 +109,10 @@ export class SetReply extends jspb.Message {
     setNstored(value: number): SetReply;
     getNerror(): number;
     setNerror(value: number): SetReply;
+    clearErrorsList(): void;
+    getErrorsList(): Array<number>;
+    setErrorsList(value: Array<number>): SetReply;
+    addErrors(value: number, index?: number): number;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): SetReply.AsObject;
@@ -124,6 +128,7 @@ export namespace SetReply {
     export type AsObject = {
         nstored: number,
         nerror: number,
+        errorsList: Array<number>,
     }
 }
 
@@ -179,6 +184,10 @@ export class SetCollectionsReply extends jspb.Message {
     setNstored(value: number): SetCollectionsReply;
     getNerror(): number;
     setNerror(value: number): SetCollectionsReply;
+    clearErrorsList(): void;
+    getErrorsList(): Array<number>;
+    setErrorsList(value: Array<number>): SetCollectionsReply;
+    addErrors(value: number, index?: number): number;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): SetCollectionsReply.AsObject;
@@ -194,6 +203,7 @@ export namespace SetCollectionsReply {
     export type AsObject = {
         nstored: number,
         nerror: number,
+        errorsList: Array<number>,
     }
 }
 
@@ -220,6 +230,10 @@ export namespace DelRequest {
 }
 
 export class DelReply extends jspb.Message { 
+    clearErrorsList(): void;
+    getErrorsList(): Array<number>;
+    setErrorsList(value: Array<number>): DelReply;
+    addErrors(value: number, index?: number): number;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): DelReply.AsObject;
@@ -233,6 +247,7 @@ export class DelReply extends jspb.Message {
 
 export namespace DelReply {
     export type AsObject = {
+        errorsList: Array<number>,
     }
 }
 
