@@ -37,7 +37,7 @@ const stopNode = async (name) => {
   }
 };
 
-// faissdb >= 0.4.3 keeps index files under <dbpath>/indexes/; the documented
+// faissdb >= 0.5.0 keeps index files under <dbpath>/indexes/; the documented
 // migration is a manual mv while the node is stopped. ci/test_migration.sh
 // mounts the data volumes on this driver at /mig<n>-data.
 const upgradeIndexLayout = (n) => {

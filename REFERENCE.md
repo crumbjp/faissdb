@@ -56,7 +56,7 @@ Client API is defined in [feature.proto](/protos/feature.proto), replication pro
 | `Dropall` | Drop all data. |
 | `DbStats` | Get RocksDB statistics. |
 
-`Set` / `SetCollections` / `Del` replies carry `errors`: the 0-based indexes of the request entries that failed (invalid vector, unknown key). Servers < 0.4.3 omit the field.
+`Set` / `SetCollections` / `Del` replies carry `errors`: the 0-based indexes of the request entries that failed (invalid vector, unknown key). Servers < 0.5.0 omit the field.
 
 ### Replica Service (internal)
 
@@ -97,7 +97,7 @@ faissdb is configured via a YAML file passed as the first argument (default: `co
 
 | Key | Type | Description |
 |---|---|---|
-| `dbpath` | string | Base directory for all data files. RocksDB databases are subdirectories; FAISS index files (one per collection, plus `faiss_trained`) live under `<dbpath>/indexes/` (directly under `<dbpath>` before 0.4.3). |
+| `dbpath` | string | Base directory for all data files. RocksDB databases are subdirectories; FAISS index files (one per collection, plus `faiss_trained`) live under `<dbpath>/indexes/` (directly under `<dbpath>` before 0.5.0). |
 
 ### db.faiss
 

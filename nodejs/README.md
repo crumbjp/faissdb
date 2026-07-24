@@ -41,7 +41,7 @@ await client.del(['k1']);
 
 Sparse vectors are also accepted: pass `v` as an object of `{ index: value }` instead of an array.
 
-`set` and `setCollections` resolve to `[nStored, nErrors, errorIndexes]` where `errorIndexes` lists the 0-based positions of the inputs that failed (faissdb >= 0.4.3; older servers report an empty list).
+`set` and `setCollections` resolve to `[nStored, nErrors, errorIndexes]` where `errorIndexes` lists the 0-based positions of the inputs that failed (faissdb >= 0.5.0; older servers report an empty list).
 
 Other operations: `train(proportion)`, `dropall()`, `dbstats()`, `status()`. A single-node `Client` class is exported as well.
 
